@@ -103,6 +103,8 @@ export default function Subscription() {
       quantity: lic.purchased,
       activeUsers: lic.active,
       pricePerLicense: lic.pricePerLicense,
+      discountType: "none" as const,
+      discountValue: 0,
     })),
     addons: subscription.addons.map((a) => a.id),
     trialPeriod: "none",
