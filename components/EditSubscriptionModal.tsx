@@ -534,7 +534,7 @@ export default function EditSubscriptionModal({
                       )}
 
                       {/* Row 1: Quantity, Price, Discount */}
-                      <div className="grid grid-cols-4 gap-3">
+                      <div className="grid grid-cols-4 gap-4">
                         <div>
                           <label className="block text-xs font-medium text-gray-500 mb-2">
                             Quantity
@@ -542,12 +542,12 @@ export default function EditSubscriptionModal({
                               <span className="text-blue-600 font-normal ml-1">(was {prevLicense.quantity})</span>
                             )}
                           </label>
-                          <div className="flex items-center h-10 bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
+                          <div className="inline-flex items-center h-10 bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm">
                             <button
                               onClick={() => updateLicenseQuantity(license.id, -1)}
-                              className="w-9 h-full flex items-center justify-center hover:bg-gray-100 border-r border-gray-200 transition-colors"
+                              className="w-9 h-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 border-r border-gray-300 transition-colors"
                             >
-                              <Minus className="w-3.5 h-3.5 text-gray-600" />
+                              <Minus className="w-4 h-4 text-gray-700" />
                             </button>
                             <input
                               type="number"
@@ -561,13 +561,13 @@ export default function EditSubscriptionModal({
                                   )
                                 )
                               }
-                              className="flex-1 h-full text-center text-sm font-semibold text-gray-900 focus:outline-none bg-transparent"
+                              className="w-12 h-full text-center text-sm font-bold text-gray-900 focus:outline-none bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
                             <button
                               onClick={() => updateLicenseQuantity(license.id, 1)}
-                              className="w-9 h-full flex items-center justify-center hover:bg-gray-100 border-l border-gray-200 transition-colors"
+                              className="w-9 h-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 border-l border-gray-300 transition-colors"
                             >
-                              <Plus className="w-3.5 h-3.5 text-gray-600" />
+                              <Plus className="w-4 h-4 text-gray-700" />
                             </button>
                           </div>
                         </div>
