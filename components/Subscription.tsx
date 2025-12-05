@@ -35,6 +35,7 @@ const mockSubscription = {
       type: "premium_zp",
       purchased: 10,
       active: 8,
+      nonBillable: 1,
       pricePerLicense: 50,
     },
     {
@@ -42,6 +43,7 @@ const mockSubscription = {
       type: "basic",
       purchased: 25,
       active: 23,
+      nonBillable: 3,
       pricePerLicense: 20,
     },
   ],
@@ -234,6 +236,9 @@ export default function Subscription() {
                     Active
                   </th>
                   <th className="text-center py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Non-Billable
+                  </th>
+                  <th className="text-center py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Available
                   </th>
                   <th className="text-right py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -260,6 +265,11 @@ export default function Subscription() {
                       </td>
                       <td className="py-4 px-4 text-center">
                         <LicenseCounter used={license.active} total={license.purchased} />
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        <span className="text-sm text-gray-500">
+                          {license.nonBillable || 0}
+                        </span>
                       </td>
                       <td className="py-4 px-4 text-center">
                         <span
