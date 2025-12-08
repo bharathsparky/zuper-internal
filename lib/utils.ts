@@ -36,3 +36,4 @@ export function getRelativeTime(date: string | Date): string {
   return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
 }
 
+

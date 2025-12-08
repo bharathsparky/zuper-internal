@@ -8,13 +8,11 @@ import {
   Minus,
   ChevronDown,
   AlertTriangle,
-  Zap,
   Calendar,
   Check,
   ArrowRight,
-  Percent,
-  DollarSign,
   Tag,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { formatCurrency } from "@/lib/utils";
@@ -34,7 +32,7 @@ interface SubscriptionData {
   billingCycle: "monthly" | "annually";
   licenses: License[];
   addons: string[];
-  trialPeriod: string;
+  trialEndDate: string | null;
 }
 
 interface EditSubscriptionModalProps {
@@ -54,30 +52,16 @@ const availableAddons = [
   { id: "analytics", name: "Advanced Analytics", price: 50, description: "Deep insights & reporting" },
   { id: "support", name: "Premium Support", price: 200, description: "24/7 priority support" },
   { id: "api", name: "API Access", price: 150, description: "Custom integrations" },
+  { id: "branding", name: "Custom Branding", price: 75, description: "White-label your portal" },
+  { id: "data_export", name: "Data Export", price: 25, description: "Export data to CSV/Excel" },
+  { id: "sso", name: "SSO Integration", price: 100, description: "Single sign-on support" },
+  { id: "webhooks", name: "Webhooks", price: 50, description: "Real-time event notifications" },
+  { id: "scheduling", name: "Advanced Scheduling", price: 80, description: "Smart route optimization" },
+  { id: "inventory", name: "Inventory Management", price: 120, description: "Track parts & materials" },
 ];
 
 const getLicenseLabel = (type: string) => {
   return licenseTypes.find((t) => t.value === type)?.label || type;
-};
-
-// Billing cycle constants
-const BILLING_CYCLE_DAYS = 30;
-const NEXT_BILLING_DATE = new Date("2024-12-15");
-
-const getDaysRemaining = () => {
-  const today = new Date();
-  const diffTime = NEXT_BILLING_DATE.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return Math.max(0, Math.min(diffDays, BILLING_CYCLE_DAYS));
-};
-
-const calculateProratedCharge = (
-  quantity: number,
-  pricePerLicense: number,
-  daysRemaining: number
-) => {
-  const dailyRate = pricePerLicense / BILLING_CYCLE_DAYS;
-  return quantity * dailyRate * daysRemaining;
 };
 
 export default function EditSubscriptionModal({
@@ -99,6 +83,10 @@ export default function EditSubscriptionModal({
   const [selectedAddons, setSelectedAddons] = useState<string[]>(
     currentSubscription.addons
   );
+  const [trialEndDate, setTrialEndDate] = useState<string>(
+    currentSubscription.trialEndDate || ""
+  );
+  const [addonSearch, setAddonSearch] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
 
@@ -112,6 +100,7 @@ export default function EditSubscriptionModal({
         discountValue: lic.discountValue || 0,
       })));
       setSelectedAddons(currentSubscription.addons);
+      setTrialEndDate(currentSubscription.trialEndDate || "");
     }
   }, [isOpen, currentSubscription]);
 
@@ -277,6 +266,17 @@ export default function EditSubscriptionModal({
       }
     });
 
+    // Track trial date changes
+    const prevTrialDate = currentSubscription.trialEndDate || "";
+    if (trialEndDate !== prevTrialDate) {
+      changes.push({
+        type: "trial",
+        description: "Trial End Date",
+        from: prevTrialDate ? new Date(prevTrialDate).toLocaleDateString() : "No trial",
+        to: trialEndDate ? new Date(trialEndDate).toLocaleDateString() : "No trial",
+      });
+    }
+
     return changes;
   };
 
@@ -299,35 +299,6 @@ export default function EditSubscriptionModal({
 
   const conflicts = getConflicts();
   const hasConflicts = conflicts.length > 0;
-
-  // Calculate prorated charges for added licenses
-  const daysRemaining = getDaysRemaining();
-  const addedLicenses: { type: string; quantity: number; price: number; prorated: number }[] = [];
-
-  licenses.forEach((lic) => {
-    const prevLic = currentSubscription.licenses.find((l) => l.type === lic.type);
-    if (prevLic && lic.quantity > prevLic.quantity) {
-      const addedQty = lic.quantity - prevLic.quantity;
-      const proratedCharge = calculateProratedCharge(addedQty, lic.pricePerLicense, daysRemaining);
-      addedLicenses.push({
-        type: lic.type,
-        quantity: addedQty,
-        price: lic.pricePerLicense,
-        prorated: proratedCharge,
-      });
-    } else if (!prevLic) {
-      const proratedCharge = calculateProratedCharge(lic.quantity, lic.pricePerLicense, daysRemaining);
-      addedLicenses.push({
-        type: lic.type,
-        quantity: lic.quantity,
-        price: lic.pricePerLicense,
-        prorated: proratedCharge,
-      });
-    }
-  });
-
-  const totalProratedCharge = addedLicenses.reduce((sum, l) => sum + l.prorated, 0);
-  const hasAddedLicenses = addedLicenses.length > 0;
 
   const handleSave = async () => {
     if (hasConflicts) return;
@@ -381,17 +352,6 @@ export default function EditSubscriptionModal({
                 </span>
               </div>
             </div>
-
-            {hasAddedLicenses && (
-              <div className="bg-blue-50 rounded-xl p-4 mb-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <Zap className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-900">Immediate prorated charge</span>
-                </div>
-                <p className="text-2xl font-bold text-blue-900">{formatCurrency(totalProratedCharge)}</p>
-                <p className="text-xs text-blue-700 mt-1">Billed now for {daysRemaining} remaining days</p>
-              </div>
-            )}
 
             <div className="flex gap-3">
               <Button variant="secondary" className="flex-1" onClick={() => setShowConfirmation(false)}>
@@ -475,6 +435,31 @@ export default function EditSubscriptionModal({
                     </button>
                   </div>
                 </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-2">
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5" />
+                      Trial End Date
+                    </span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      value={trialEndDate}
+                      onChange={(e) => setTrialEndDate(e.target.value)}
+                      className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 text-sm font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                    />
+                  </div>
+                  {trialEndDate && (
+                    <button
+                      onClick={() => setTrialEndDate("")}
+                      className="mt-2 text-xs text-red-600 hover:text-red-700 font-medium"
+                    >
+                      Clear trial date
+                    </button>
+                  )}
+                </div>
               </div>
             </section>
 
@@ -534,7 +519,7 @@ export default function EditSubscriptionModal({
                       )}
 
                       {/* Row 1: Quantity, Price, Discount */}
-                      <div className="grid grid-cols-4 gap-4">
+                      <div className="grid grid-cols-4 gap-3">
                         <div>
                           <label className="block text-xs font-medium text-gray-500 mb-2">
                             Quantity
@@ -545,9 +530,9 @@ export default function EditSubscriptionModal({
                           <div className="inline-flex items-center h-10 bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm">
                             <button
                               onClick={() => updateLicenseQuantity(license.id, -1)}
-                              className="w-9 h-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 border-r border-gray-300 transition-colors"
+                              className="w-10 h-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 border-r border-gray-300 transition-colors"
                             >
-                              <Minus className="w-4 h-4 text-gray-700" />
+                              <Minus className="w-4 h-4 text-gray-600" />
                             </button>
                             <input
                               type="number"
@@ -565,9 +550,9 @@ export default function EditSubscriptionModal({
                             />
                             <button
                               onClick={() => updateLicenseQuantity(license.id, 1)}
-                              className="w-9 h-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 border-l border-gray-300 transition-colors"
+                              className="w-10 h-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 border-l border-gray-300 transition-colors"
                             >
-                              <Plus className="w-4 h-4 text-gray-700" />
+                              <Plus className="w-4 h-4 text-gray-600" />
                             </button>
                           </div>
                         </div>
@@ -673,48 +658,83 @@ export default function EditSubscriptionModal({
             </section>
 
             {/* Add-ons Section */}
-            <section>
-              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">Add-ons</h3>
-              <div className="grid grid-cols-2 gap-4">
-                {availableAddons.map((addon) => {
-                  const isSelected = selectedAddons.includes(addon.id);
-                  const wasSelected = currentSubscription.addons.includes(addon.id);
-                  const isChanged = isSelected !== wasSelected;
+            <section className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+              <div className="px-5 py-4 border-b border-gray-100">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Add-ons</h3>
+                  <span className="text-xs text-gray-500">
+                    {selectedAddons.length} selected · {formatCurrency(addonsTotal)}/mo
+                  </span>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search add-ons..."
+                    value={addonSearch}
+                    onChange={(e) => setAddonSearch(e.target.value)}
+                    className="w-full h-10 pl-10 pr-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                  />
+                </div>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                {availableAddons
+                  .filter(addon => 
+                    addon.name.toLowerCase().includes(addonSearch.toLowerCase()) ||
+                    addon.description.toLowerCase().includes(addonSearch.toLowerCase())
+                  )
+                  .map((addon) => {
+                    const isSelected = selectedAddons.includes(addon.id);
+                    const wasSelected = currentSubscription.addons.includes(addon.id);
+                    const isChanged = isSelected !== wasSelected;
 
-                  return (
-                    <button
-                      key={addon.id}
-                      onClick={() => toggleAddon(addon.id)}
-                      className={`p-4 rounded-xl border text-left transition-all ${
-                        isSelected
-                          ? "bg-blue-50 border-blue-300 shadow-md ring-1 ring-blue-100"
-                          : "bg-white border-gray-200 shadow-sm hover:border-gray-300 hover:shadow"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-gray-900">{addon.name}</span>
-                            {isChanged && (
-                              <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
-                                isSelected ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                              }`}>
-                                {isSelected ? "Adding" : "Removing"}
-                              </span>
-                            )}
+                    return (
+                      <div
+                        key={addon.id}
+                        onClick={() => toggleAddon(addon.id)}
+                        className={`flex items-center justify-between px-5 py-3 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors ${
+                          isSelected ? "bg-blue-50" : "hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <button
+                            type="button"
+                            className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
+                              isSelected 
+                                ? "bg-blue-500" 
+                                : "border-2 border-gray-300 bg-white hover:border-gray-400"
+                            }`}
+                          >
+                            {isSelected && <Check className="w-3 h-3 text-white" />}
+                          </button>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-gray-900 truncate">{addon.name}</span>
+                              {isChanged && (
+                                <span className={`text-xs font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${
+                                  isSelected ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                                }`}>
+                                  {isSelected ? "Adding" : "Removing"}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500 truncate">{addon.description}</p>
                           </div>
-                          <p className="text-xs text-gray-500 mt-1">{addon.description}</p>
-                          <p className="text-sm font-bold text-gray-900 mt-2">{formatCurrency(addon.price)}/mo</p>
                         </div>
-                        <div className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-colors ${
-                          isSelected ? "bg-blue-500" : "border-2 border-gray-300 bg-white"
-                        }`}>
-                          {isSelected && <Check className="w-4 h-4 text-white" />}
-                        </div>
+                        <span className="text-sm font-semibold text-gray-900 ml-4 flex-shrink-0">
+                          {formatCurrency(addon.price)}/mo
+                        </span>
                       </div>
-                    </button>
-                  );
-                })}
+                    );
+                  })}
+                {availableAddons.filter(addon => 
+                  addon.name.toLowerCase().includes(addonSearch.toLowerCase()) ||
+                  addon.description.toLowerCase().includes(addonSearch.toLowerCase())
+                ).length === 0 && (
+                  <div className="px-5 py-8 text-center text-sm text-gray-500">
+                    No add-ons found matching "{addonSearch}"
+                  </div>
+                )}
               </div>
             </section>
 
@@ -774,56 +794,6 @@ export default function EditSubscriptionModal({
                       </div>
                     </div>
                   ))}
-                </div>
-              </section>
-            )}
-
-            {/* Prorated Billing Section */}
-            {hasAddedLicenses && (
-              <section className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                      <Zap className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-900">Prorated Billing</h3>
-                      <p className="text-xs text-gray-500">{daysRemaining} days remaining in cycle</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                    <Calendar className="w-3.5 h-3.5" />
-                    <span>Next billing: Dec 15, 2024</span>
-                  </div>
-                </div>
-
-                <div className="p-5">
-                  <div className="space-y-3">
-                    {addedLicenses.map((license, idx) => {
-                      const dailyRate = license.price / BILLING_CYCLE_DAYS;
-                      return (
-                        <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
-                              +{license.quantity} {getLicenseLabel(license.type)}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              {license.quantity} × {formatCurrency(dailyRate)}/day × {daysRemaining} days
-                            </p>
-                          </div>
-                          <span className="text-sm font-semibold text-gray-900">{formatCurrency(license.prorated)}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="px-5 py-4 bg-blue-50 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-blue-600 font-medium">Immediate charge</p>
-                    <p className="text-xs text-blue-500">Billed now via Chargebee</p>
-                  </div>
-                  <span className="text-2xl font-bold text-blue-600">{formatCurrency(totalProratedCharge)}</span>
                 </div>
               </section>
             )}

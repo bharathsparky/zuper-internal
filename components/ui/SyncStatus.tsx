@@ -59,3 +59,4 @@ export function SyncStatus({ state, lastSynced, onRetry, className }: SyncStatus
   );
 }
 
+
