@@ -18,6 +18,10 @@ import {
   Clock,
   AlertCircle,
   XCircle,
+  ChevronDown,
+  ChevronRight,
+  Users,
+  Puzzle,
   type LucideIcon,
 } from "lucide-react";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
@@ -136,6 +140,29 @@ const licenseTypeLabels: Record<string, string> = {
   basic: "Roofing Basic User",
 };
 
+// Sync error messages - Context: Sync between Chargebee and Internal Admin
+const syncErrorMessages: Record<string, { title: string; description: string; learnMoreUrl?: string }> = {
+  subscription_not_found: {
+    title: "Chargebee subscription not found",
+    description: "The subscription ID does not exist in Chargebee. It may have been cancelled or the ID is incorrect.",
+    learnMoreUrl: "#",
+  },
+  customer_id_mismatch: {
+    title: "Customer ID mismatch",
+    description: "The customer ID in Internal Admin does not match the customer in Chargebee. Please verify the customer mapping.",
+    learnMoreUrl: "#",
+  },
+  license_sync_failed: {
+    title: "License count sync failed",
+    description: "Failed to sync license quantities from Chargebee. The subscription may have been modified directly in Chargebee.",
+    learnMoreUrl: "#",
+  },
+  invoice_fetch_failed: {
+    title: "Failed to fetch invoices",
+    description: "Could not retrieve invoice data from Chargebee. Please check the API connection and try again.",
+  },
+};
+
 // Add-on icon mapping
 const addonIcons: Record<string, { icon: LucideIcon; bgColor: string; iconColor: string }> = {
   zuper_pay: { icon: Wallet, bgColor: "bg-emerald-50", iconColor: "text-emerald-600" },
@@ -144,7 +171,7 @@ const addonIcons: Record<string, { icon: LucideIcon; bgColor: string; iconColor:
   api: { icon: Code, bgColor: "bg-cyan-50", iconColor: "text-cyan-600" },
 };
 
-type TabType = "overview" | "licenses" | "addons" | "invoices";
+type TabType = "overview" | "invoices";
 
 export default function Subscription() {
   const [subscription] = useState(mockSubscription);
@@ -152,13 +179,44 @@ export default function Subscription() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("overview");
+  const [isLicensesExpanded, setIsLicensesExpanded] = useState(true);
+  const [isAddonsExpanded, setIsAddonsExpanded] = useState(true);
+  
+  // Sync error state - randomize on each sync
+  const [syncError, setSyncError] = useState<{
+    hasError: boolean;
+    errorType: string;
+    timestamp: string;
+  } | null>(() => {
+    // Initial 50% chance of error
+    if (Math.random() < 0.5) {
+      const errorTypes = ["subscription_not_found", "customer_id_mismatch", "license_sync_failed", "invoice_fetch_failed"];
+      return {
+        hasError: true,
+        errorType: errorTypes[Math.floor(Math.random() * errorTypes.length)],
+        timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+      };
+    }
+    return null;
+  });
 
   const handleSync = () => {
     setIsSyncing(true);
-    // Simulate sync
+    // Simulate sync with 50% chance of error
     setTimeout(() => {
       setIsSyncing(false);
-    }, 2000);
+      // Randomize: 50% success, 50% error
+      if (Math.random() < 0.5) {
+        const errorTypes = ["subscription_not_found", "customer_id_mismatch", "license_sync_failed", "invoice_fetch_failed"];
+        setSyncError({
+          hasError: true,
+          errorType: errorTypes[Math.floor(Math.random() * errorTypes.length)],
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        setSyncError(null);
+      }
+    }, 1500);
   };
 
   // Calculate totals
@@ -221,10 +279,11 @@ export default function Subscription() {
 
   const tabs = [
     { id: "overview" as TabType, label: "Overview", count: null },
-    { id: "licenses" as TabType, label: "Licenses", count: subscription.licenses.length + (subscription.nonBillableLicenses?.length || 0) },
-    { id: "addons" as TabType, label: "Add-ons", count: subscription.addons.length },
     { id: "invoices" as TabType, label: "Invoices", count: subscription.invoices?.length || 0 },
   ];
+
+  const totalLicenses = subscription.licenses.reduce((sum, l) => sum + l.purchased, 0);
+  const totalNonBillable = subscription.nonBillableLicenses?.reduce((sum, l) => sum + l.count, 0) || 0;
 
   return (
     <div className="space-y-6">
@@ -234,7 +293,7 @@ export default function Subscription() {
           actions={
             <div className="flex items-center gap-3">
               <SyncStatus
-                state={isSyncing ? "syncing" : subscription.syncStatus.state}
+                state={isSyncing ? "syncing" : (syncError?.hasError ? "error" : subscription.syncStatus.state)}
                 lastSynced={getRelativeTime(subscription.syncStatus.lastSynced)}
               />
               <Button
@@ -259,6 +318,38 @@ export default function Subscription() {
           <CardTitle>Subscription Details</CardTitle>
         </CardHeader>
       </Card>
+
+      {/* Sync Error Banner - Compact */}
+      {syncError?.hasError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-red-800">
+                  {syncErrorMessages[syncError.errorType]?.title || "Sync Error"}
+                </span>
+                <span className="text-xs text-red-500">
+                  {getRelativeTime(syncError.timestamp)}
+                </span>
+              </div>
+              <p className="text-xs text-red-600 mt-0.5">
+                {syncErrorMessages[syncError.errorType]?.description || "An error occurred during sync."}
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
+              onClick={handleSync}
+              isLoading={isSyncing}
+              className="border-red-200 text-red-700 hover:bg-red-100 flex-shrink-0"
+            >
+              Retry
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Tab Navigation */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
@@ -329,27 +420,158 @@ export default function Subscription() {
                 </div>
               </div>
 
+              {/* Collapsible Licenses Section */}
+              <div className="bg-gray-50 rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setIsLicensesExpanded(!isLicensesExpanded)}
+                  className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Users className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div className="text-left">
+                      <h3 className="text-sm font-semibold text-gray-900">Licenses</h3>
+                      <p className="text-xs text-gray-500">
+                        {totalLicenses} billable{totalNonBillable > 0 ? ` · ${totalNonBillable} non-billable` : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold text-gray-900">{formatCurrency(licensesTotal)}/mo</span>
+                    {isLicensesExpanded ? (
+                      <ChevronDown className="w-5 h-5 text-gray-400" />
+                    ) : (
+                      <ChevronRight className="w-5 h-5 text-gray-400" />
+                    )}
+                  </div>
+                </button>
+                {isLicensesExpanded && (
+                  <div className="px-5 pb-5 space-y-4">
+                    {/* Billable Licenses */}
+                    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-gray-100 bg-gray-50">
+                            <th className="text-left py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                            <th className="text-center py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                            <th className="text-center py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Active</th>
+                            <th className="text-right py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                          {subscription.licenses.map((license) => (
+                            <tr key={license.id}>
+                              <td className="py-3 px-4">
+                                <span className="text-sm font-medium text-gray-900">
+                                  {licenseTypeLabels[license.type] || license.type}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <span className="text-sm text-gray-900">{license.purchased}</span>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <LicenseCounter used={license.active} total={license.purchased} />
+                              </td>
+                              <td className="py-3 px-4 text-right">
+                                <span className="text-sm font-medium text-gray-900">
+                                  {formatCurrency(license.purchased * license.pricePerLicense)}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Non-Billable Licenses - Simplified */}
+                    {subscription.nonBillableLicenses && subscription.nonBillableLicenses.length > 0 && (
+                      <div className="flex items-center justify-between py-3 px-4 bg-white rounded-lg border border-gray-200">
+                        <div className="flex items-center gap-2">
+                          <UserX className="w-4 h-4 text-gray-400" />
+                          <span className="text-sm text-gray-600">Non-billable licenses</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-sm font-semibold text-gray-900">{totalNonBillable}</span>
+                          <span className="text-xs text-gray-500 ml-1">no charge</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Collapsible Add-ons Section */}
+              <div className="bg-gray-50 rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setIsAddonsExpanded(!isAddonsExpanded)}
+                  className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <Puzzle className="w-4 h-4 text-purple-600" />
+                    </div>
+                    <div className="text-left">
+                      <h3 className="text-sm font-semibold text-gray-900">Add-ons</h3>
+                      <p className="text-xs text-gray-500">{subscription.addons.length} active</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold text-gray-900">{formatCurrency(addonsTotal)}/mo</span>
+                    {isAddonsExpanded ? (
+                      <ChevronDown className="w-5 h-5 text-gray-400" />
+                    ) : (
+                      <ChevronRight className="w-5 h-5 text-gray-400" />
+                    )}
+                  </div>
+                </button>
+                {isAddonsExpanded && (
+                  <div className="px-5 pb-5">
+                    {subscription.addons.length > 0 ? (
+                      <div className="space-y-2">
+                        {subscription.addons.map((addon) => {
+                          const iconConfig = addonIcons[addon.id] || {
+                            icon: CreditCard,
+                            bgColor: "bg-blue-50",
+                            iconColor: "text-blue-600",
+                          };
+                          const IconComponent = iconConfig.icon;
+
+                          return (
+                            <div
+                              key={addon.id}
+                              className="flex items-center justify-between py-3 px-4 bg-white rounded-lg border border-gray-200"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 ${iconConfig.bgColor} rounded-lg flex items-center justify-center`}>
+                                  <IconComponent className={`w-4 h-4 ${iconConfig.iconColor}`} />
+                                </div>
+                                <span className="text-sm font-medium text-gray-900">{addon.name}</span>
+                              </div>
+                              <span className="text-sm font-medium text-gray-900">{formatCurrency(addon.price)}/mo</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 bg-white rounded-lg border border-gray-200">
+                        <p className="text-sm text-gray-500">No add-ons active</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Billing Summary in Overview */}
-              <div className="bg-gray-50 rounded-xl p-5">
-                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">Billing Summary</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Licenses ({subscription.licenses.reduce((sum, l) => sum + l.purchased, 0)} total)</span>
-                    <span className="text-sm text-gray-900">
-                      {formatCurrency(licensesTotal)}/month
-                    </span>
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Monthly Total</p>
+                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(grandTotal)}<span className="text-sm font-normal text-gray-500">/month</span></p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Add-ons ({subscription.addons.length} active)</span>
-                    <span className="text-sm text-gray-900">
-                      {formatCurrency(addonsTotal)}/month
-                    </span>
-                  </div>
-                  <div className="pt-3 border-t border-gray-200 flex justify-between">
-                    <span className="text-base font-semibold text-gray-900">Monthly Total</span>
-                    <span className="text-lg font-bold text-blue-600">
-                      {formatCurrency(grandTotal)}/month
-                    </span>
+                  <div className="text-right text-sm text-gray-500">
+                    <p>Licenses: {formatCurrency(licensesTotal)}</p>
+                    <p>Add-ons: {formatCurrency(addonsTotal)}</p>
                   </div>
                 </div>
               </div>
@@ -384,179 +606,6 @@ export default function Subscription() {
                     </code>
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* Licenses Tab */}
-          {activeTab === "licenses" && (
-            <div className="space-y-6">
-              {/* Billable License Details */}
-              <div className="bg-gray-50 rounded-xl p-5">
-                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">Billable Licenses</h3>
-                <div className="overflow-x-auto bg-white rounded-lg border border-gray-200">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-100">
-                        <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          License Type
-                        </th>
-                        <th className="text-center py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Purchased
-                        </th>
-                        <th className="text-center py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Active
-                        </th>
-                        <th className="text-center py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Available
-                        </th>
-                        <th className="text-right py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          $/License
-                        </th>
-                        <th className="text-right py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Total
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {subscription.licenses.map((license) => {
-                        const available = license.purchased - license.active;
-
-                        return (
-                          <tr key={license.id} className="hover:bg-gray-50">
-                            <td className="py-4 px-4">
-                              <p className="text-sm font-medium text-gray-900">
-                                {licenseTypeLabels[license.type] || license.type}
-                              </p>
-                            </td>
-                            <td className="py-4 px-4 text-center">
-                              <span className="text-sm text-gray-900">{license.purchased}</span>
-                            </td>
-                            <td className="py-4 px-4 text-center">
-                              <LicenseCounter used={license.active} total={license.purchased} />
-                            </td>
-                            <td className="py-4 px-4 text-center">
-                              <span className="text-sm font-medium text-gray-900">
-                                {available}
-                              </span>
-                            </td>
-                            <td className="py-4 px-4 text-right">
-                              <span className="text-sm text-gray-900">
-                                {formatCurrency(license.pricePerLicense)}
-                              </span>
-                            </td>
-                            <td className="py-4 px-4 text-right">
-                              <span className="text-sm font-medium text-gray-900">
-                                {formatCurrency(license.purchased * license.pricePerLicense)}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="mt-4 pt-3 border-t border-gray-200 flex justify-between">
-                  <span className="text-sm font-medium text-gray-500">Licenses Subtotal</span>
-                  <span className="text-sm font-semibold text-gray-900">
-                    {formatCurrency(licensesTotal)}/month
-                  </span>
-                </div>
-              </div>
-
-              {/* Non-Billable Licenses */}
-              {subscription.nonBillableLicenses && subscription.nonBillableLicenses.length > 0 && (
-                <div className="bg-gray-50 rounded-xl p-5">
-                  <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-2 flex items-center gap-2">
-                    <UserX className="w-4 h-4 text-gray-400" />
-                    Non-Billable Licenses
-                  </h3>
-                  <p className="text-sm text-gray-500 mb-4">
-                    These licenses are provided at no additional cost and are not included in billing.
-                  </p>
-                  <div className="space-y-3">
-                    {subscription.nonBillableLicenses.map((license) => (
-                      <div
-                        key={license.id}
-                        className="flex items-center justify-between py-3 px-4 bg-white rounded-lg border border-gray-200"
-                      >
-                        <div>
-                          <p className="text-sm font-medium text-gray-900 capitalize">
-                            {license.type} License
-                          </p>
-                          <p className="text-xs text-gray-500">{license.description}</p>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-lg font-semibold text-gray-900">{license.count}</span>
-                          <p className="text-xs text-gray-500">No charge</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-4 pt-3 border-t border-gray-200 flex justify-between">
-                    <span className="text-sm font-medium text-gray-500">Total Non-Billable</span>
-                    <span className="text-sm font-semibold text-gray-900">
-                      {subscription.nonBillableLicenses.reduce((sum, l) => sum + l.count, 0)} licenses
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Add-ons Tab */}
-          {activeTab === "addons" && (
-            <div className="space-y-6">
-              {/* Add-ons */}
-              <div className="bg-gray-50 rounded-xl p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Active Add-ons</h3>
-                  <Button variant="ghost" size="sm" leftIcon={<Plus className="w-4 h-4" />}>
-                    Add Add-on
-                  </Button>
-                </div>
-                {subscription.addons.length > 0 ? (
-                  <div className="space-y-3">
-                    {subscription.addons.map((addon) => {
-                      const iconConfig = addonIcons[addon.id] || {
-                        icon: CreditCard,
-                        bgColor: "bg-blue-50",
-                        iconColor: "text-blue-600",
-                      };
-                      const IconComponent = iconConfig.icon;
-
-                      return (
-                        <div
-                          key={addon.id}
-                          className="flex items-center justify-between py-3 px-4 bg-white rounded-lg border border-gray-200"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 ${iconConfig.bgColor} rounded-lg flex items-center justify-center`}>
-                              <IconComponent className={`w-5 h-5 ${iconConfig.iconColor}`} />
-                            </div>
-                            <span className="text-sm font-medium text-gray-900">
-                              {addon.name}
-                            </span>
-                          </div>
-                          <span className="text-sm font-semibold text-gray-900">
-                            {formatCurrency(addon.price)}/month
-                          </span>
-                        </div>
-                      );
-                    })}
-                    <div className="mt-4 pt-3 border-t border-gray-200 flex justify-between">
-                      <span className="text-sm font-medium text-gray-500">Total Add-ons</span>
-                      <span className="text-sm font-semibold text-gray-900">
-                        {formatCurrency(addonsTotal)}/month
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 bg-white rounded-lg border border-gray-200">
-                    <p className="text-sm text-gray-500">No add-ons currently active</p>
-                    <p className="text-xs text-gray-400 mt-1">Click "Add Add-on" to enable features</p>
-                  </div>
-                )}
               </div>
             </div>
           )}

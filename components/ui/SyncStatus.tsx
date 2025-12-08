@@ -3,7 +3,7 @@
 import { Check, RefreshCw, X, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type SyncState = "synced" | "syncing" | "failed" | "delayed";
+type SyncState = "synced" | "syncing" | "failed" | "delayed" | "error";
 
 interface SyncStatusProps {
   state: SyncState;
@@ -37,6 +37,12 @@ export function SyncStatus({ state, lastSynced, onRetry, className }: SyncStatus
       iconClass: "text-yellow-500",
       text: `Sync delayed (last: ${lastSynced || "unknown"})`,
       textClass: "text-yellow-700",
+    },
+    error: {
+      icon: X,
+      iconClass: "text-red-500",
+      text: "Sync error",
+      textClass: "text-red-600",
     },
   };
 
