@@ -1,9 +1,10 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import ServicePackageSidePanel from "@/components/settings/service-packages/ServicePackageSidePanel";
 
-export default function EditServicePackagePage() {
+function EditServicePackageContent() {
   const searchParams = useSearchParams();
   const packageId = searchParams.get("id");
 
@@ -20,3 +21,10 @@ export default function EditServicePackagePage() {
   );
 }
 
+export default function EditServicePackagePage() {
+  return (
+    <Suspense fallback={<div className="w-full h-full bg-[#F1F5F9] flex items-center justify-center">Loading...</div>}>
+      <EditServicePackageContent />
+    </Suspense>
+  );
+}
