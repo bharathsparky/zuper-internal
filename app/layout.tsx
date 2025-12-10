@@ -8,7 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Internal Admin - Customers",
+  title: "Zuper IQ - Intelligent Quoting",
   description: "Zuper Internal Admin Portal",
 };
 
