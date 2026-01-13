@@ -274,7 +274,7 @@ export default function EditSubscriptionModal({
     0
   );
   const prevAddonsTotal = availableAddons
-    .filter((a) => currentSubscription.addons.includes(a.id))
+    .filter((a) => currentSubscription.addons.some(addon => addon.id === a.id))
     .reduce((sum, a) => sum + a.price, 0);
   const prevGrandTotal = prevLicensesTotal + prevAddonsTotal;
   const totalDifference = grandTotal - prevGrandTotal;
