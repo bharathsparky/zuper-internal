@@ -11,17 +11,15 @@ import {
   Headphones,
   Code,
   UserX,
-  FileText,
-  ExternalLink,
-  Download,
   CheckCircle2,
   Clock,
   AlertCircle,
-  XCircle,
   ChevronDown,
   ChevronRight,
   Users,
   Puzzle,
+  DollarSign,
+  Tag,
   type LucideIcon,
 } from "lucide-react";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
@@ -36,10 +34,9 @@ import EditSubscriptionModal from "@/components/EditSubscriptionModal";
 const mockSubscription = {
   hasSubscription: true,
   planName: "Premium Plan",
-  billingCycle: "Monthly" as const,
+  billingCycle: "Quarterly" as const,
   nextBillingDate: "2024-12-15",
   status: "active" as const,
-  trialEndDate: "2024-12-01",
   licenses: [
     {
       id: "1",
@@ -47,6 +44,8 @@ const mockSubscription = {
       purchased: 10,
       active: 8,
       pricePerLicense: 50,
+      discountType: "percentage" as const,
+      discountValue: 10,
     },
     {
       id: "2",
@@ -54,6 +53,8 @@ const mockSubscription = {
       purchased: 25,
       active: 23,
       pricePerLicense: 20,
+      discountType: "none" as const,
+      discountValue: 0,
     },
   ],
   nonBillableLicenses: [
@@ -71,8 +72,13 @@ const mockSubscription = {
     },
   ],
   addons: [
-    { id: "zuper_pay", name: "Zuper Pay", price: 100 },
-    { id: "analytics", name: "Advanced Analytics", price: 50 },
+    { id: "zuper_pay", name: "Zuper Pay", price: 100, discountType: "fixed" as const, discountValue: 20 },
+    { id: "analytics", name: "Advanced Analytics", price: 50, discountType: "none" as const, discountValue: 0 },
+  ],
+  oneTimeCharges: [
+    { id: "implementation", name: "Implementation Fee", amount: 2500, status: "paid" as const, paidDate: "2024-10-15", discountType: "none" as const, discountValue: 0 },
+    { id: "platform", name: "Platform Setup Fee", amount: 500, status: "paid" as const, paidDate: "2024-10-15", discountType: "none" as const, discountValue: 0 },
+    { id: "training", name: "Training & Onboarding", amount: 1000, status: "pending" as const, paidDate: null, discountType: "percentage" as const, discountValue: 10 },
   ],
   syncStatus: {
     lastSynced: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
@@ -80,58 +86,6 @@ const mockSubscription = {
     subscriptionId: "sub_ABC123XYZ",
     chargebeeCustomerId: "cust_456DEF",
   },
-  invoices: [
-    {
-      id: "inv_001",
-      invoiceNumber: "INV-2024-001234",
-      date: "2024-12-01",
-      dueDate: "2024-12-15",
-      amount: 1150,
-      status: "paid" as const,
-      paidDate: "2024-12-03",
-      chargebeeInvoiceId: "cb_inv_ABC123",
-    },
-    {
-      id: "inv_002",
-      invoiceNumber: "INV-2024-001189",
-      date: "2024-11-01",
-      dueDate: "2024-11-15",
-      amount: 1150,
-      status: "paid" as const,
-      paidDate: "2024-11-10",
-      chargebeeInvoiceId: "cb_inv_DEF456",
-    },
-    {
-      id: "inv_003",
-      invoiceNumber: "INV-2024-001098",
-      date: "2024-10-01",
-      dueDate: "2024-10-15",
-      amount: 1100,
-      status: "paid" as const,
-      paidDate: "2024-10-12",
-      chargebeeInvoiceId: "cb_inv_GHI789",
-    },
-    {
-      id: "inv_004",
-      invoiceNumber: "INV-2024-000987",
-      date: "2024-09-01",
-      dueDate: "2024-09-15",
-      amount: 1100,
-      status: "paid" as const,
-      paidDate: "2024-09-14",
-      chargebeeInvoiceId: "cb_inv_JKL012",
-    },
-    {
-      id: "inv_005",
-      invoiceNumber: "INV-2024-000876",
-      date: "2024-08-01",
-      dueDate: "2024-08-15",
-      amount: 950,
-      status: "paid" as const,
-      paidDate: "2024-08-08",
-      chargebeeInvoiceId: "cb_inv_MNO345",
-    },
-  ],
 };
 
 const licenseTypeLabels: Record<string, string> = {
@@ -171,16 +125,15 @@ const addonIcons: Record<string, { icon: LucideIcon; bgColor: string; iconColor:
   api: { icon: Code, bgColor: "bg-cyan-50", iconColor: "text-cyan-600" },
 };
 
-type TabType = "overview" | "invoices";
 
 export default function Subscription() {
   const [subscription] = useState(mockSubscription);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [isLicensesExpanded, setIsLicensesExpanded] = useState(true);
   const [isAddonsExpanded, setIsAddonsExpanded] = useState(true);
+  const [isOneTimeChargesExpanded, setIsOneTimeChargesExpanded] = useState(true);
   
   // Sync error state - randomize on each sync
   const [syncError, setSyncError] = useState<{
@@ -219,29 +172,57 @@ export default function Subscription() {
     }, 1500);
   };
 
-  // Calculate totals
+  // Helper to calculate discounted price
+  const calculateDiscountedPrice = (price: number, discountType: string, discountValue: number) => {
+    if (discountType === "none" || discountValue === 0) return price;
+    if (discountType === "fixed") return Math.max(0, price - discountValue);
+    if (discountType === "percentage") return price * (1 - discountValue / 100);
+    return price;
+  };
+
+  // Calculate totals with discounts
   const licensesTotal = subscription.licenses.reduce(
-    (sum, lic) => sum + lic.purchased * lic.pricePerLicense,
+    (sum, lic) => {
+      const discountedPrice = calculateDiscountedPrice(lic.pricePerLicense, lic.discountType || "none", lic.discountValue || 0);
+      return sum + lic.purchased * discountedPrice;
+    },
     0
   );
-  const addonsTotal = subscription.addons.reduce((sum, addon) => sum + addon.price, 0);
+  const addonsTotal = subscription.addons.reduce((sum, addon) => {
+    const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType || "none", addon.discountValue || 0);
+    return sum + discountedPrice;
+  }, 0);
+  const oneTimeChargesTotal = subscription.oneTimeCharges?.reduce((sum, charge) => {
+    const discountedAmount = calculateDiscountedPrice(charge.amount, charge.discountType || "none", charge.discountValue || 0);
+    return sum + discountedAmount;
+  }, 0) || 0;
   const grandTotal = licensesTotal + addonsTotal;
 
   // Prepare data for edit modal
   const editModalData = {
     plan: "premium",
-    billingCycle: subscription.billingCycle.toLowerCase() as "monthly" | "annually",
+    billingCycle: subscription.billingCycle.toLowerCase() as "monthly" | "quarterly" | "annually",
     licenses: subscription.licenses.map((lic) => ({
       id: lic.id,
       type: lic.type,
       quantity: lic.purchased,
       activeUsers: lic.active,
       pricePerLicense: lic.pricePerLicense,
-      discountType: "none" as const,
-      discountValue: 0,
+      discountType: (lic.discountType || "none") as "none" | "fixed" | "percentage",
+      discountValue: lic.discountValue || 0,
     })),
-    addons: subscription.addons.map((a) => a.id),
-    trialEndDate: subscription.trialEndDate,
+    addons: subscription.addons.map((a) => ({
+      id: a.id,
+      discountType: (a.discountType || "none") as "none" | "fixed" | "percentage",
+      discountValue: a.discountValue || 0,
+    })),
+    oneTimeCharges: (subscription.oneTimeCharges || []).map((charge) => ({
+      id: charge.id,
+      name: charge.name,
+      amount: charge.amount,
+      discountType: (charge.discountType || "none") as "none" | "fixed" | "percentage",
+      discountValue: charge.discountValue || 0,
+    })),
   };
 
   // Empty State
@@ -276,11 +257,6 @@ export default function Subscription() {
       </Card>
     );
   }
-
-  const tabs = [
-    { id: "overview" as TabType, label: "Overview", count: null },
-    { id: "invoices" as TabType, label: "Invoices", count: subscription.invoices?.length || 0 },
-  ];
 
   const totalLicenses = subscription.licenses.reduce((sum, l) => sum + l.purchased, 0);
   const totalNonBillable = subscription.nonBillableLicenses?.reduce((sum, l) => sum + l.count, 0) || 0;
@@ -351,46 +327,14 @@ export default function Subscription() {
         </div>
       )}
 
-      {/* Tab Navigation */}
+      {/* Subscription Content */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-        <div className="border-b border-gray-200">
-          <nav className="flex -mb-px">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`relative px-6 py-4 text-sm font-medium transition-colors ${
-                  activeTab === tab.id
-                    ? "text-blue-600 border-b-2 border-blue-600"
-                    : "text-gray-500 hover:text-gray-700 hover:border-b-2 hover:border-gray-300"
-                }`}
-              >
-                <span className="flex items-center gap-2">
-                  {tab.label}
-                  {tab.count !== null && (
-                    <span className={`px-2 py-0.5 text-xs rounded-full ${
-                      activeTab === tab.id 
-                        ? "bg-blue-100 text-blue-600" 
-                        : "bg-gray-100 text-gray-500"
-                    }`}>
-                      {tab.count}
-                    </span>
-                  )}
-                </span>
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {/* Tab Content */}
         <div className="p-6">
-          {/* Overview Tab */}
-          {activeTab === "overview" && (
-            <div className="space-y-6">
+          <div className="space-y-6">
               {/* Plan Information */}
               <div className="bg-gray-50 rounded-xl p-5">
                 <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">Plan Information</h3>
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                   <div>
                     <p className="text-sm font-medium text-gray-500 mb-1">Plan Name</p>
                     <Badge variant="premium">{subscription.planName}</Badge>
@@ -408,14 +352,6 @@ export default function Subscription() {
                   <div>
                     <p className="text-sm font-medium text-gray-500 mb-1">Subscription Status</p>
                     <StatusBadge status={subscription.status} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 mb-1">Trial End Date</p>
-                    <p className="text-sm text-gray-900">
-                      {subscription.trialEndDate
-                        ? formatDate(subscription.trialEndDate)
-                        : "N/A"}
-                    </p>
                   </div>
                 </div>
               </div>
@@ -456,30 +392,59 @@ export default function Subscription() {
                             <th className="text-left py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                             <th className="text-center py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
                             <th className="text-center py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Active</th>
+                            <th className="text-center py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Discount</th>
                             <th className="text-right py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                          {subscription.licenses.map((license) => (
-                            <tr key={license.id}>
-                              <td className="py-3 px-4">
-                                <span className="text-sm font-medium text-gray-900">
-                                  {licenseTypeLabels[license.type] || license.type}
-                                </span>
-                              </td>
-                              <td className="py-3 px-4 text-center">
-                                <span className="text-sm text-gray-900">{license.purchased}</span>
-                              </td>
-                              <td className="py-3 px-4 text-center">
-                                <LicenseCounter used={license.active} total={license.purchased} />
-                              </td>
-                              <td className="py-3 px-4 text-right">
-                                <span className="text-sm font-medium text-gray-900">
-                                  {formatCurrency(license.purchased * license.pricePerLicense)}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
+                          {subscription.licenses.map((license) => {
+                            const hasDiscount = license.discountType && license.discountType !== "none" && license.discountValue > 0;
+                            const originalTotal = license.purchased * license.pricePerLicense;
+                            const discountedPrice = calculateDiscountedPrice(license.pricePerLicense, license.discountType || "none", license.discountValue || 0);
+                            const discountedTotal = license.purchased * discountedPrice;
+                            
+                            return (
+                              <tr key={license.id}>
+                                <td className="py-3 px-4">
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {licenseTypeLabels[license.type] || license.type}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-center">
+                                  <span className="text-sm text-gray-900">{license.purchased}</span>
+                                </td>
+                                <td className="py-3 px-4 text-center">
+                                  <LicenseCounter used={license.active} total={license.purchased} />
+                                </td>
+                                <td className="py-3 px-4 text-center">
+                                  {hasDiscount ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full">
+                                      <Tag className="w-3 h-3" />
+                                      {license.discountType === "fixed" ? `$${license.discountValue}` : `${license.discountValue}%`}
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs text-gray-400">—</span>
+                                  )}
+                                </td>
+                                <td className="py-3 px-4 text-right">
+                                  {hasDiscount ? (
+                                    <div className="flex flex-col items-end">
+                                      <span className="text-xs text-gray-400 line-through">
+                                        {formatCurrency(originalTotal)}
+                                      </span>
+                                      <span className="text-sm font-medium text-green-600">
+                                        {formatCurrency(discountedTotal)}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-sm font-medium text-gray-900">
+                                      {formatCurrency(originalTotal)}
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -536,6 +501,8 @@ export default function Subscription() {
                             iconColor: "text-blue-600",
                           };
                           const IconComponent = iconConfig.icon;
+                          const hasDiscount = addon.discountType && addon.discountType !== "none" && addon.discountValue > 0;
+                          const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType || "none", addon.discountValue || 0);
 
                           return (
                             <div
@@ -546,9 +513,28 @@ export default function Subscription() {
                                 <div className={`w-8 h-8 ${iconConfig.bgColor} rounded-lg flex items-center justify-center`}>
                                   <IconComponent className={`w-4 h-4 ${iconConfig.iconColor}`} />
                                 </div>
-                                <span className="text-sm font-medium text-gray-900">{addon.name}</span>
+                                <div>
+                                  <span className="text-sm font-medium text-gray-900">{addon.name}</span>
+                                  {hasDiscount && (
+                                    <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full">
+                                      <Tag className="w-3 h-3" />
+                                      {addon.discountType === "fixed" ? `$${addon.discountValue} off` : `${addon.discountValue}% off`}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                              <span className="text-sm font-medium text-gray-900">{formatCurrency(addon.price)}/mo</span>
+                              {hasDiscount ? (
+                                <div className="flex flex-col items-end">
+                                  <span className="text-xs text-gray-400 line-through">
+                                    {formatCurrency(addon.price)}/mo
+                                  </span>
+                                  <span className="text-sm font-medium text-green-600">
+                                    {formatCurrency(discountedPrice)}/mo
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-sm font-medium text-gray-900">{formatCurrency(addon.price)}/mo</span>
+                              )}
                             </div>
                           );
                         })}
@@ -561,6 +547,113 @@ export default function Subscription() {
                   </div>
                 )}
               </div>
+
+              {/* Collapsible One-time Charges Section (Read-only) */}
+              {subscription.oneTimeCharges && subscription.oneTimeCharges.length > 0 && (
+                <div className="bg-gray-50 rounded-xl overflow-hidden">
+                  <button
+                    onClick={() => setIsOneTimeChargesExpanded(!isOneTimeChargesExpanded)}
+                    className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                        <DollarSign className="w-4 h-4 text-amber-600" />
+                      </div>
+                      <div className="text-left">
+                        <h3 className="text-sm font-semibold text-gray-900">One-time Charges</h3>
+                        <p className="text-xs text-gray-500">{subscription.oneTimeCharges.length} charges</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-gray-900">{formatCurrency(oneTimeChargesTotal)}</span>
+                      {isOneTimeChargesExpanded ? (
+                        <ChevronDown className="w-5 h-5 text-gray-400" />
+                      ) : (
+                        <ChevronRight className="w-5 h-5 text-gray-400" />
+                      )}
+                    </div>
+                  </button>
+                  {isOneTimeChargesExpanded && (
+                    <div className="px-5 pb-5">
+                      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b border-gray-100 bg-gray-50">
+                              <th className="text-left py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Charge</th>
+                              <th className="text-center py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                              <th className="text-center py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Discount</th>
+                              <th className="text-center py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Paid Date</th>
+                              <th className="text-right py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-50">
+                            {subscription.oneTimeCharges.map((charge) => {
+                              const hasDiscount = charge.discountType && charge.discountType !== "none" && charge.discountValue > 0;
+                              const discountedAmount = calculateDiscountedPrice(charge.amount, charge.discountType || "none", charge.discountValue || 0);
+                              
+                              return (
+                                <tr key={charge.id}>
+                                  <td className="py-3 px-4">
+                                    <span className="text-sm font-medium text-gray-900">{charge.name}</span>
+                                  </td>
+                                  <td className="py-3 px-4 text-center">
+                                    {charge.status === "paid" ? (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full">
+                                        <CheckCircle2 className="w-3 h-3" />
+                                        Paid
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-50 text-yellow-700 text-xs font-medium rounded-full">
+                                        <Clock className="w-3 h-3" />
+                                        Pending
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="py-3 px-4 text-center">
+                                    {hasDiscount ? (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full">
+                                        <Tag className="w-3 h-3" />
+                                        {charge.discountType === "fixed" ? `$${charge.discountValue}` : `${charge.discountValue}%`}
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs text-gray-400">—</span>
+                                    )}
+                                  </td>
+                                  <td className="py-3 px-4 text-center">
+                                    <span className="text-sm text-gray-600">
+                                      {charge.paidDate ? formatDate(charge.paidDate) : "—"}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 px-4 text-right">
+                                    {hasDiscount ? (
+                                      <div className="flex flex-col items-end">
+                                        <span className="text-xs text-gray-400 line-through">
+                                          {formatCurrency(charge.amount)}
+                                        </span>
+                                        <span className="text-sm font-medium text-green-600">
+                                          {formatCurrency(discountedAmount)}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-sm font-medium text-gray-900">
+                                        {formatCurrency(charge.amount)}
+                                      </span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                      <p className="mt-3 text-xs text-gray-500 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        One-time charges are managed in Chargebee and displayed here for reference only.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Billing Summary in Overview */}
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-100">
@@ -608,126 +701,6 @@ export default function Subscription() {
                 </div>
               </div>
             </div>
-          )}
-
-          {/* Invoices Tab */}
-          {activeTab === "invoices" && (
-            <div className="space-y-6">
-              {/* Past Invoices */}
-              <div className="bg-gray-50 rounded-xl p-5">
-                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4 flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-gray-400" />
-                  Invoice History
-                </h3>
-                {subscription.invoices && subscription.invoices.length > 0 ? (
-                  <div className="overflow-x-auto bg-white rounded-lg border border-gray-200">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-gray-100">
-                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Invoice #
-                          </th>
-                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Date
-                          </th>
-                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Due Date
-                          </th>
-                          <th className="text-right py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Amount
-                          </th>
-                          <th className="text-center py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Status
-                          </th>
-                          <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Paid Date
-                          </th>
-                          <th className="text-center py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Actions
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-50">
-                        {subscription.invoices.map((invoice) => {
-                          const statusConfig = {
-                            paid: { icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50", label: "Paid" },
-                            pending: { icon: Clock, color: "text-yellow-600", bg: "bg-yellow-50", label: "Pending" },
-                            overdue: { icon: AlertCircle, color: "text-red-600", bg: "bg-red-50", label: "Overdue" },
-                            voided: { icon: XCircle, color: "text-gray-500", bg: "bg-gray-50", label: "Voided" },
-                          }[invoice.status] || { icon: Clock, color: "text-gray-500", bg: "bg-gray-50", label: invoice.status };
-                          
-                          const StatusIcon = statusConfig.icon;
-
-                          return (
-                            <tr key={invoice.id} className="hover:bg-gray-50">
-                              <td className="py-4 px-4">
-                                <span className="text-sm font-medium text-gray-900">
-                                  {invoice.invoiceNumber}
-                                </span>
-                              </td>
-                              <td className="py-4 px-4">
-                                <span className="text-sm text-gray-600">
-                                  {formatDate(invoice.date)}
-                                </span>
-                              </td>
-                              <td className="py-4 px-4">
-                                <span className="text-sm text-gray-600">
-                                  {formatDate(invoice.dueDate)}
-                                </span>
-                              </td>
-                              <td className="py-4 px-4 text-right">
-                                <span className="text-sm font-medium text-gray-900">
-                                  {formatCurrency(invoice.amount)}
-                                </span>
-                              </td>
-                              <td className="py-4 px-4">
-                                <div className="flex items-center justify-center">
-                                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusConfig.bg} ${statusConfig.color}`}>
-                                    <StatusIcon className="w-3.5 h-3.5" />
-                                    {statusConfig.label}
-                                  </span>
-                                </div>
-                              </td>
-                              <td className="py-4 px-4">
-                                <span className="text-sm text-gray-600">
-                                  {invoice.paidDate ? formatDate(invoice.paidDate) : "—"}
-                                </span>
-                              </td>
-                              <td className="py-4 px-4">
-                                <div className="flex items-center justify-center gap-2">
-                                  <button
-                                    className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-                                    title="Download Invoice"
-                                  >
-                                    <Download className="w-4 h-4" />
-                                  </button>
-                                  <a
-                                    href={`https://zuper.chargebee.com/d/invoices/${invoice.chargebeeInvoiceId}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                                    title="View in Chargebee"
-                                  >
-                                    <ExternalLink className="w-4 h-4" />
-                                  </a>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 bg-white rounded-lg border border-gray-200">
-                    <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm text-gray-500">No invoices found</p>
-                    <p className="text-xs text-gray-400 mt-1">Invoices will appear here once synced from Chargebee</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

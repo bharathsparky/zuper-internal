@@ -8,11 +8,11 @@ import {
   Minus,
   ChevronDown,
   AlertTriangle,
-  Calendar,
   Check,
   ArrowRight,
   Tag,
   Search,
+  DollarSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { formatCurrency } from "@/lib/utils";
@@ -27,12 +27,26 @@ interface License {
   discountValue: number;
 }
 
+interface AddonWithDiscount {
+  id: string;
+  discountType: "none" | "fixed" | "percentage";
+  discountValue: number;
+}
+
+interface OneTimeChargeWithDiscount {
+  id: string;
+  name: string;
+  amount: number;
+  discountType: "none" | "fixed" | "percentage";
+  discountValue: number;
+}
+
 interface SubscriptionData {
   plan: string;
-  billingCycle: "monthly" | "annually";
+  billingCycle: "monthly" | "quarterly" | "annually";
   licenses: License[];
-  addons: string[];
-  trialEndDate: string | null;
+  addons: AddonWithDiscount[];
+  oneTimeCharges?: OneTimeChargeWithDiscount[];
 }
 
 interface EditSubscriptionModalProps {
@@ -70,7 +84,7 @@ export default function EditSubscriptionModal({
   currentSubscription,
 }: EditSubscriptionModalProps) {
   const [plan, setPlan] = useState(currentSubscription.plan);
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "annually">(
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "quarterly" | "annually">(
     currentSubscription.billingCycle
   );
   const [licenses, setLicenses] = useState<License[]>(
@@ -80,11 +94,20 @@ export default function EditSubscriptionModal({
       discountValue: lic.discountValue || 0,
     }))
   );
-  const [selectedAddons, setSelectedAddons] = useState<string[]>(
-    currentSubscription.addons
+  const [addonDiscounts, setAddonDiscounts] = useState<Record<string, { discountType: "none" | "fixed" | "percentage"; discountValue: number }>>(
+    currentSubscription.addons.reduce((acc, addon) => ({
+      ...acc,
+      [addon.id]: { discountType: addon.discountType || "none", discountValue: addon.discountValue || 0 }
+    }), {})
   );
-  const [trialEndDate, setTrialEndDate] = useState<string>(
-    currentSubscription.trialEndDate || ""
+  const [selectedAddons, setSelectedAddons] = useState<string[]>(
+    currentSubscription.addons.map(a => a.id)
+  );
+  const [oneTimeChargeDiscounts, setOneTimeChargeDiscounts] = useState<Record<string, { discountType: "none" | "fixed" | "percentage"; discountValue: number }>>(
+    (currentSubscription.oneTimeCharges || []).reduce((acc, charge) => ({
+      ...acc,
+      [charge.id]: { discountType: charge.discountType || "none", discountValue: charge.discountValue || 0 }
+    }), {})
   );
   const [addonSearch, setAddonSearch] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -99,8 +122,15 @@ export default function EditSubscriptionModal({
         discountType: lic.discountType || "none",
         discountValue: lic.discountValue || 0,
       })));
-      setSelectedAddons(currentSubscription.addons);
-      setTrialEndDate(currentSubscription.trialEndDate || "");
+      setSelectedAddons(currentSubscription.addons.map(a => a.id));
+      setAddonDiscounts(currentSubscription.addons.reduce((acc, addon) => ({
+        ...acc,
+        [addon.id]: { discountType: addon.discountType || "none", discountValue: addon.discountValue || 0 }
+      }), {}));
+      setOneTimeChargeDiscounts((currentSubscription.oneTimeCharges || []).reduce((acc, charge) => ({
+        ...acc,
+        [charge.id]: { discountType: charge.discountType || "none", discountValue: charge.discountValue || 0 }
+      }), {}));
     }
   }, [isOpen, currentSubscription]);
 
@@ -171,11 +201,62 @@ export default function EditSubscriptionModal({
   };
 
   const toggleAddon = (addonId: string) => {
-    setSelectedAddons((prev) =>
-      prev.includes(addonId)
-        ? prev.filter((id) => id !== addonId)
-        : [...prev, addonId]
-    );
+    setSelectedAddons((prev) => {
+      if (prev.includes(addonId)) {
+        return prev.filter((id) => id !== addonId);
+      } else {
+        // Initialize discount state for new addon
+        if (!addonDiscounts[addonId]) {
+          setAddonDiscounts(prevDiscounts => ({
+            ...prevDiscounts,
+            [addonId]: { discountType: "none", discountValue: 0 }
+          }));
+        }
+        return [...prev, addonId];
+      }
+    });
+  };
+
+  const updateAddonDiscount = (addonId: string, discountType: "none" | "fixed" | "percentage", discountValue: number) => {
+    setAddonDiscounts(prev => ({
+      ...prev,
+      [addonId]: { discountType, discountValue }
+    }));
+  };
+
+  const calculateAddonDiscountedPrice = (addon: typeof availableAddons[0]) => {
+    const discount = addonDiscounts[addon.id];
+    if (!discount || discount.discountType === "none" || discount.discountValue === 0) {
+      return addon.price;
+    }
+    if (discount.discountType === "fixed") {
+      return Math.max(0, addon.price - discount.discountValue);
+    }
+    if (discount.discountType === "percentage") {
+      return addon.price * (1 - discount.discountValue / 100);
+    }
+    return addon.price;
+  };
+
+  const updateOneTimeChargeDiscount = (chargeId: string, discountType: "none" | "fixed" | "percentage", discountValue: number) => {
+    setOneTimeChargeDiscounts(prev => ({
+      ...prev,
+      [chargeId]: { discountType, discountValue }
+    }));
+  };
+
+  const calculateOneTimeChargeDiscountedPrice = (charge: OneTimeChargeWithDiscount) => {
+    const discount = oneTimeChargeDiscounts[charge.id];
+    if (!discount || discount.discountType === "none" || discount.discountValue === 0) {
+      return charge.amount;
+    }
+    if (discount.discountType === "fixed") {
+      return Math.max(0, charge.amount - discount.discountValue);
+    }
+    if (discount.discountType === "percentage") {
+      return charge.amount * (1 - discount.discountValue / 100);
+    }
+    return charge.amount;
   };
 
   // Calculate totals
@@ -185,7 +266,7 @@ export default function EditSubscriptionModal({
   );
   const addonsTotal = availableAddons
     .filter((a) => selectedAddons.includes(a.id))
-    .reduce((sum, a) => sum + a.price, 0);
+    .reduce((sum, a) => sum + calculateAddonDiscountedPrice(a), 0);
   const grandTotal = licensesTotal + addonsTotal;
 
   const prevLicensesTotal = currentSubscription.licenses.reduce(
@@ -235,21 +316,23 @@ export default function EditSubscriptionModal({
       }
     });
 
+    const prevAddonIds = currentSubscription.addons.map(a => a.id);
     const addedAddons = selectedAddons.filter(
-      (id) => !currentSubscription.addons.includes(id)
+      (id) => !prevAddonIds.includes(id)
     );
-    const removedAddons = currentSubscription.addons.filter(
+    const removedAddons = prevAddonIds.filter(
       (id) => !selectedAddons.includes(id)
     );
 
     addedAddons.forEach((id) => {
       const addon = availableAddons.find((a) => a.id === id);
       if (addon) {
+        const discountedPrice = calculateAddonDiscountedPrice(addon);
         changes.push({
           type: "addon",
           description: addon.name,
           from: "Not active",
-          to: `Active (+${formatCurrency(addon.price)}/mo)`,
+          to: `Active (+${formatCurrency(discountedPrice)}/mo)`,
         });
       }
     });
@@ -266,16 +349,47 @@ export default function EditSubscriptionModal({
       }
     });
 
-    // Track trial date changes
-    const prevTrialDate = currentSubscription.trialEndDate || "";
-    if (trialEndDate !== prevTrialDate) {
-      changes.push({
-        type: "trial",
-        description: "Trial End Date",
-        from: prevTrialDate ? new Date(prevTrialDate).toLocaleDateString() : "No trial",
-        to: trialEndDate ? new Date(trialEndDate).toLocaleDateString() : "No trial",
-      });
-    }
+    // Track addon discount changes
+    selectedAddons.forEach((addonId) => {
+      const prevAddon = currentSubscription.addons.find(a => a.id === addonId);
+      const currentDiscount = addonDiscounts[addonId];
+      if (prevAddon && currentDiscount) {
+        const prevDiscountType = prevAddon.discountType || "none";
+        const prevDiscountValue = prevAddon.discountValue || 0;
+        if (currentDiscount.discountType !== prevDiscountType || currentDiscount.discountValue !== prevDiscountValue) {
+          const addon = availableAddons.find(a => a.id === addonId);
+          if (addon) {
+            changes.push({
+              type: "addon_discount",
+              description: `${addon.name} discount`,
+              from: prevDiscountType === "none" ? "No discount" : 
+                    prevDiscountType === "fixed" ? `$${prevDiscountValue} off` : `${prevDiscountValue}% off`,
+              to: currentDiscount.discountType === "none" ? "No discount" :
+                  currentDiscount.discountType === "fixed" ? `$${currentDiscount.discountValue} off` : `${currentDiscount.discountValue}% off`,
+            });
+          }
+        }
+      }
+    });
+
+    // Track one-time charge discount changes
+    (currentSubscription.oneTimeCharges || []).forEach((charge) => {
+      const currentDiscount = oneTimeChargeDiscounts[charge.id];
+      if (currentDiscount) {
+        const prevDiscountType = charge.discountType || "none";
+        const prevDiscountValue = charge.discountValue || 0;
+        if (currentDiscount.discountType !== prevDiscountType || currentDiscount.discountValue !== prevDiscountValue) {
+          changes.push({
+            type: "one_time_charge_discount",
+            description: `${charge.name} discount`,
+            from: prevDiscountType === "none" ? "No discount" : 
+                  prevDiscountType === "fixed" ? `$${prevDiscountValue} off` : `${prevDiscountValue}% off`,
+            to: currentDiscount.discountType === "none" ? "No discount" :
+                currentDiscount.discountType === "fixed" ? `$${currentDiscount.discountValue} off` : `${currentDiscount.discountValue}% off`,
+          });
+        }
+      }
+    });
 
     return changes;
   };
@@ -424,6 +538,16 @@ export default function EditSubscriptionModal({
                       Monthly
                     </button>
                     <button
+                      onClick={() => setBillingCycle("quarterly")}
+                      className={`flex-1 rounded-md text-sm font-medium transition-all ${
+                        billingCycle === "quarterly"
+                          ? "bg-white text-gray-900 shadow-sm"
+                          : "text-gray-500 hover:text-gray-700"
+                      }`}
+                    >
+                      Quarterly
+                    </button>
+                    <button
                       onClick={() => setBillingCycle("annually")}
                       className={`flex-1 rounded-md text-sm font-medium transition-all ${
                         billingCycle === "annually"
@@ -434,31 +558,6 @@ export default function EditSubscriptionModal({
                       Annually
                     </button>
                   </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-2">
-                    <span className="flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5" />
-                      Trial End Date
-                    </span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      value={trialEndDate}
-                      onChange={(e) => setTrialEndDate(e.target.value)}
-                      className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 text-sm font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
-                    />
-                  </div>
-                  {trialEndDate && (
-                    <button
-                      onClick={() => setTrialEndDate("")}
-                      className="mt-2 text-xs text-red-600 hover:text-red-700 font-medium"
-                    >
-                      Clear trial date
-                    </button>
-                  )}
                 </div>
               </div>
             </section>
@@ -677,7 +776,7 @@ export default function EditSubscriptionModal({
                   />
                 </div>
               </div>
-              <div className="max-h-64 overflow-y-auto">
+              <div className="max-h-80 overflow-y-auto">
                 {availableAddons
                   .filter(addon => 
                     addon.name.toLowerCase().includes(addonSearch.toLowerCase()) ||
@@ -685,45 +784,111 @@ export default function EditSubscriptionModal({
                   )
                   .map((addon) => {
                     const isSelected = selectedAddons.includes(addon.id);
-                    const wasSelected = currentSubscription.addons.includes(addon.id);
+                    const prevAddonIds = currentSubscription.addons.map(a => a.id);
+                    const wasSelected = prevAddonIds.includes(addon.id);
                     const isChanged = isSelected !== wasSelected;
+                    const discount = addonDiscounts[addon.id] || { discountType: "none", discountValue: 0 };
+                    const hasDiscount = discount.discountType !== "none" && discount.discountValue > 0;
+                    const discountedPrice = calculateAddonDiscountedPrice(addon);
 
                     return (
                       <div
                         key={addon.id}
-                        onClick={() => toggleAddon(addon.id)}
-                        className={`flex items-center justify-between px-5 py-3 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors ${
+                        className={`border-b border-gray-100 last:border-b-0 transition-colors ${
                           isSelected ? "bg-blue-50" : "hover:bg-gray-50"
                         }`}
                       >
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <button
-                            type="button"
-                            className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
-                              isSelected 
-                                ? "bg-blue-500" 
-                                : "border-2 border-gray-300 bg-white hover:border-gray-400"
-                            }`}
-                          >
-                            {isSelected && <Check className="w-3 h-3 text-white" />}
-                          </button>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-gray-900 truncate">{addon.name}</span>
-                              {isChanged && (
-                                <span className={`text-xs font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${
-                                  isSelected ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                                }`}>
-                                  {isSelected ? "Adding" : "Removing"}
+                        <div
+                          onClick={() => toggleAddon(addon.id)}
+                          className="flex items-center justify-between px-5 py-3 cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <button
+                              type="button"
+                              className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
+                                isSelected 
+                                  ? "bg-blue-500" 
+                                  : "border-2 border-gray-300 bg-white hover:border-gray-400"
+                              }`}
+                            >
+                              {isSelected && <Check className="w-3 h-3 text-white" />}
+                            </button>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-gray-900 truncate">{addon.name}</span>
+                                {isChanged && (
+                                  <span className={`text-xs font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${
+                                    isSelected ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                                  }`}>
+                                    {isSelected ? "Adding" : "Removing"}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-500 truncate">{addon.description}</p>
+                            </div>
+                          </div>
+                          <div className="ml-4 flex-shrink-0 text-right">
+                            {hasDiscount ? (
+                              <div className="flex flex-col items-end">
+                                <span className="text-xs text-gray-400 line-through">{formatCurrency(addon.price)}/mo</span>
+                                <span className="text-sm font-semibold text-green-600">{formatCurrency(discountedPrice)}/mo</span>
+                              </div>
+                            ) : (
+                              <span className="text-sm font-semibold text-gray-900">{formatCurrency(addon.price)}/mo</span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Discount controls for selected addons */}
+                        {isSelected && (
+                          <div className="px-5 pb-3" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-2 pl-8">
+                              <span className="text-xs font-medium text-gray-500 flex items-center gap-1">
+                                <Tag className="w-3 h-3" />
+                                Discount:
+                              </span>
+                              <select
+                                value={discount.discountType}
+                                onChange={(e) => updateAddonDiscount(
+                                  addon.id,
+                                  e.target.value as "none" | "fixed" | "percentage",
+                                  discount.discountValue
+                                )}
+                                className="h-8 px-2 bg-white border border-gray-200 rounded-md text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
+                              >
+                                <option value="none">None</option>
+                                <option value="fixed">Fixed ($)</option>
+                                <option value="percentage">Percentage (%)</option>
+                              </select>
+                              {discount.discountType !== "none" && (
+                                <div className="relative">
+                                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                                    {discount.discountType === "fixed" ? "$" : ""}
+                                  </span>
+                                  <input
+                                    type="number"
+                                    value={discount.discountValue}
+                                    onChange={(e) => updateAddonDiscount(
+                                      addon.id,
+                                      discount.discountType,
+                                      parseFloat(e.target.value) || 0
+                                    )}
+                                    placeholder="0"
+                                    className={`w-20 h-8 ${discount.discountType === "fixed" ? "pl-5" : "pl-2"} pr-5 bg-white border border-gray-200 rounded-md text-xs font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                  />
+                                  {discount.discountType === "percentage" && (
+                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">%</span>
+                                  )}
+                                </div>
+                              )}
+                              {hasDiscount && (
+                                <span className="text-xs text-green-600 font-medium">
+                                  Saving {formatCurrency(addon.price - discountedPrice)}/mo
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs text-gray-500 truncate">{addon.description}</p>
                           </div>
-                        </div>
-                        <span className="text-sm font-semibold text-gray-900 ml-4 flex-shrink-0">
-                          {formatCurrency(addon.price)}/mo
-                        </span>
+                        )}
                       </div>
                     );
                   })}
@@ -732,11 +897,114 @@ export default function EditSubscriptionModal({
                   addon.description.toLowerCase().includes(addonSearch.toLowerCase())
                 ).length === 0 && (
                   <div className="px-5 py-8 text-center text-sm text-gray-500">
-                    No add-ons found matching "{addonSearch}"
+                    No add-ons found matching &quot;{addonSearch}&quot;
                   </div>
                 )}
               </div>
             </section>
+
+            {/* One-time Charges Section */}
+            {currentSubscription.oneTimeCharges && currentSubscription.oneTimeCharges.length > 0 && (
+              <section className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                <div className="px-5 py-4 border-b border-gray-100">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-amber-600" />
+                      One-time Charges
+                    </h3>
+                    <span className="text-xs text-gray-500">
+                      {currentSubscription.oneTimeCharges.length} charges
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Charges are read-only. Discounts can be applied to reduce the amount.
+                  </p>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {currentSubscription.oneTimeCharges.map((charge) => {
+                    const discount = oneTimeChargeDiscounts[charge.id] || { discountType: "none", discountValue: 0 };
+                    const hasDiscount = discount.discountType !== "none" && discount.discountValue > 0;
+                    const discountedPrice = calculateOneTimeChargeDiscountedPrice(charge);
+                    const prevDiscount = (currentSubscription.oneTimeCharges || []).find(c => c.id === charge.id);
+                    const isChanged = prevDiscount && (
+                      discount.discountType !== (prevDiscount.discountType || "none") ||
+                      discount.discountValue !== (prevDiscount.discountValue || 0)
+                    );
+
+                    return (
+                      <div
+                        key={charge.id}
+                        className={`px-5 py-4 ${isChanged ? "bg-blue-50" : ""}`}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <span className="text-sm font-medium text-gray-900">{charge.name}</span>
+                            {isChanged && (
+                              <span className="ml-2 text-xs font-medium px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
+                                Discount changed
+                              </span>
+                            )}
+                          </div>
+                          {hasDiscount ? (
+                            <div className="flex flex-col items-end">
+                              <span className="text-xs text-gray-400 line-through">{formatCurrency(charge.amount)}</span>
+                              <span className="text-sm font-semibold text-green-600">{formatCurrency(discountedPrice)}</span>
+                            </div>
+                          ) : (
+                            <span className="text-sm font-semibold text-gray-900">{formatCurrency(charge.amount)}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-gray-500 flex items-center gap-1">
+                            <Tag className="w-3 h-3" />
+                            Discount:
+                          </span>
+                          <select
+                            value={discount.discountType}
+                            onChange={(e) => updateOneTimeChargeDiscount(
+                              charge.id,
+                              e.target.value as "none" | "fixed" | "percentage",
+                              discount.discountValue
+                            )}
+                            className="h-8 px-2 bg-white border border-gray-200 rounded-md text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
+                          >
+                            <option value="none">None</option>
+                            <option value="fixed">Fixed ($)</option>
+                            <option value="percentage">Percentage (%)</option>
+                          </select>
+                          {discount.discountType !== "none" && (
+                            <div className="relative">
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                                {discount.discountType === "fixed" ? "$" : ""}
+                              </span>
+                              <input
+                                type="number"
+                                value={discount.discountValue}
+                                onChange={(e) => updateOneTimeChargeDiscount(
+                                  charge.id,
+                                  discount.discountType,
+                                  parseFloat(e.target.value) || 0
+                                )}
+                                placeholder="0"
+                                className={`w-20 h-8 ${discount.discountType === "fixed" ? "pl-6" : "pl-2"} pr-6 bg-white border border-gray-200 rounded-md text-xs font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                              />
+                              {discount.discountType === "percentage" && (
+                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">%</span>
+                              )}
+                            </div>
+                          )}
+                          {hasDiscount && (
+                            <span className="text-xs text-green-600 font-medium">
+                              Saving {formatCurrency(charge.amount - discountedPrice)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
             {/* Billing Summary Section */}
             <section className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
