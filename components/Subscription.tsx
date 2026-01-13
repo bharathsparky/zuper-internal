@@ -420,7 +420,7 @@ export default function Subscription() {
                                   {hasDiscount ? (
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full">
                                       <Tag className="w-3 h-3" />
-                                      {license.discountType === "fixed" ? `$${license.discountValue}` : `${license.discountValue}%`}
+                                      {(license.discountType as "fixed" | "percentage") === "fixed" ? `$${license.discountValue}` : `${license.discountValue}%`}
                                     </span>
                                   ) : (
                                     <span className="text-xs text-gray-400">—</span>
@@ -518,7 +518,7 @@ export default function Subscription() {
                                   {hasDiscount && (
                                     <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full">
                                       <Tag className="w-3 h-3" />
-                                      {addon.discountType === "fixed" ? `$${addon.discountValue} off` : `${addon.discountValue}% off`}
+                                      {(addon.discountType as "fixed" | "percentage") === "fixed" ? `$${addon.discountValue} off` : `${addon.discountValue}% off`}
                                     </span>
                                   )}
                                 </div>
@@ -613,7 +613,7 @@ export default function Subscription() {
                                     {hasDiscount ? (
                                       <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full">
                                         <Tag className="w-3 h-3" />
-                                        {charge.discountType === "fixed" ? `$${charge.discountValue}` : `${charge.discountValue}%`}
+                                        {(charge.discountType as "fixed" | "percentage") === "fixed" ? `$${charge.discountValue}` : `${charge.discountValue}%`}
                                       </span>
                                     ) : (
                                       <span className="text-xs text-gray-400">—</span>

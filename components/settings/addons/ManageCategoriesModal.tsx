@@ -162,3 +162,7 @@ export default function ManageCategoriesModal({ isOpen, onClose }: ManageCategor
   );
 }
 
+
+
+
+
