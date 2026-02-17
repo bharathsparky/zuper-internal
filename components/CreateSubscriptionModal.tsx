@@ -20,20 +20,15 @@ const licenseTypes = [
 
 const addons = [
   // Seat Add-on
-  { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, group: "Seats", description: "Login, time tracking, geo tracking, basic job view" },
+  { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, group: "Seats", unit: "seat", description: "Login, time tracking, geo tracking, basic job view" },
   // Zuper Connect
-  { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, group: "Zuper Connect", description: "SMS/MMS telephony with call flows, recording, CRM sync" },
-  { id: "zuper_connect_plus", name: "Zuper Connect – Plus", price: 299, group: "Zuper Connect", description: "Advanced telephony with call masking, ring groups, voicemails" },
-  { id: "zuper_connect_intelligence", name: "Zuper Connect – Intelligence", price: 499, group: "Zuper Connect", description: "AI telephony with summaries, responder, 3-yr storage" },
+  { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, group: "Zuper Connect", description: "SMS/MMS telephony with call flows, recording, notes, CRM sync. 1 number, 25 users, 2,500 mins, 2,000 SMS, 500 MMS; 1-yr recording" },
+  { id: "zuper_connect_plus", name: "Zuper Connect – Plus", price: 299, group: "Zuper Connect", description: "Advanced telephony with call masking, ring groups, voicemails. 3 numbers, 25 users, 5,000 mins, 3,000 SMS, 1,000 MMS; 1-yr recording" },
+  { id: "zuper_connect_intelligence", name: "Zuper Connect – Intelligence", price: 499, group: "Zuper Connect", description: "AI telephony with summaries, responder, 3-yr storage. 5 numbers, 25 users, 5,000 mins, 6,000 SMS, 2,000 MMS; 200 AI calls" },
   // Zuper Fleet
-  { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, group: "Zuper Fleet", description: "GPS tracking, AI safety cams, health monitoring" },
-  { id: "zuper_fleet_safetycam", name: "Zuper Fleet – SafetyCam AI", price: 35, group: "Zuper Fleet", description: "Dashcam for driver monitoring, safety scoring" },
-  { id: "zuper_fleet_gps", name: "Zuper Fleet – GPS with Vehicle Health", price: 30, group: "Zuper Fleet", description: "Real-time GPS, predictive alerts" },
-  // Platform Features (included in Roofing, add-on for Non-Roofing)
-  { id: "customer_portal", name: "Customer Portal", price: 50, group: "Platform Features", description: "Branded self-service portal for jobs, invoices, and requests" },
-  { id: "report_builder", name: "Report Builder", price: 75, group: "Platform Features", description: "Advanced reporting for custom dashboards and KPIs" },
-  { id: "workflow_builder", name: "Workflow Builder", price: 80, group: "Platform Features", description: "Visual automation for processes (up to 5,000 executions/mo)" },
-  { id: "platform_maintenance", name: "Platform Maintenance Fee", price: 100, group: "Platform Features", description: "Annual infrastructure, maintenance, and compliance" },
+  { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, group: "Zuper Fleet", unit: "vehicle", description: "GPS tracking, AI safety cams, health monitoring" },
+  { id: "zuper_fleet_safetycam", name: "Zuper Fleet – SafetyCam AI", price: 35, group: "Zuper Fleet", unit: "vehicle", description: "Dashcam for driver monitoring, safety scoring" },
+  { id: "zuper_fleet_gps", name: "Zuper Fleet – GPS with Vehicle Health", price: 30, group: "Zuper Fleet", unit: "vehicle", description: "Real-time GPS, predictive alerts" },
 ];
 
 export default function CreateSubscriptionModal({
@@ -261,24 +256,15 @@ export default function CreateSubscriptionModal({
                 return groups.map(group => (
                   <div key={group}>
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{group}</p>
-                    {group === "Platform Features" && plan.startsWith("roofing_") && (
-                      <p className="text-xs text-green-600 mb-2">✓ Included in your Roofing plan at no extra cost</p>
-                    )}
-                    {group === "Platform Features" && !plan.startsWith("roofing_") && (
-                      <p className="text-xs text-amber-600 mb-2">Charged as add-ons for Non-Roofing plans</p>
-                    )}
                     <div className="space-y-2">
                       {addons.filter(a => a.group === group).map((addon) => {
-                        const isIncluded = group === "Platform Features" && plan.startsWith("roofing_");
                         const isSelected = selectedAddons.includes(addon.id);
                         const qty = addonQuantities[addon.id] || 1;
                         return (
                           <div
                             key={addon.id}
                             className={`rounded-lg border transition-colors ${
-                              isIncluded
-                                ? "bg-green-50 border-green-200"
-                                : isSelected
+                              isSelected
                                 ? "bg-blue-50 border-blue-200"
                                 : "bg-gray-50 border-gray-200 hover:border-blue-300"
                             }`}
@@ -287,10 +273,9 @@ export default function CreateSubscriptionModal({
                               <div className="flex items-center gap-3">
                                 <input
                                   type="checkbox"
-                                  checked={isIncluded || isSelected}
-                                  onChange={() => !isIncluded && toggleAddon(addon.id)}
-                                  disabled={isIncluded}
-                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50"
+                                  checked={isSelected}
+                                  onChange={() => toggleAddon(addon.id)}
+                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                 />
                                 <div>
                                   <span className="text-sm text-gray-900">{addon.name}</span>
@@ -298,17 +283,15 @@ export default function CreateSubscriptionModal({
                                 </div>
                               </div>
                               <span className="text-sm text-gray-600 flex-shrink-0 ml-4">
-                                {isIncluded ? (
-                                  <span className="text-green-600 font-medium">Included</span>
-                                ) : addon.group === "Seats" ? (
+                                {addon.group === "Seats" ? (
                                   <>{formatCurrency(addon.price)}/mo each</>
                                 ) : (
-                                  <>{formatCurrency(addon.price)}/mo</>
+                                  <>{formatCurrency(addon.price)}{addon.unit ? `/${addon.unit}` : ""}/mo</>
                                 )}
                               </span>
                             </label>
                             {/* Qty controls only for seat-type add-ons */}
-                            {isSelected && !isIncluded && addon.group === "Seats" && (
+                            {isSelected && addon.group === "Seats" && (
                               <div className="px-3 pb-3 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex items-center gap-2 pl-7">
                                   <span className="text-xs font-medium text-gray-500">Qty:</span>

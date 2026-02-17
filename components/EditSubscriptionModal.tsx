@@ -65,20 +65,15 @@ const licenseTypes = [
 
 const availableAddons = [
   // Seat Add-on
-  { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, group: "Seats", description: "Login, time tracking, geo tracking, basic job view" },
+  { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, group: "Seats", unit: "seat", description: "Login, time tracking, geo tracking, basic job view" },
   // Zuper Connect
-  { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, group: "Zuper Connect", description: "SMS/MMS telephony with call flows, recording, CRM sync" },
-  { id: "zuper_connect_plus", name: "Zuper Connect – Plus", price: 299, group: "Zuper Connect", description: "Advanced telephony with call masking, ring groups, voicemails" },
-  { id: "zuper_connect_intelligence", name: "Zuper Connect – Intelligence", price: 499, group: "Zuper Connect", description: "AI telephony with summaries, responder, 3-yr storage" },
+  { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, group: "Zuper Connect", description: "SMS/MMS telephony with call flows, recording, notes, CRM sync. 1 number, 25 users, 2,500 mins, 2,000 SMS, 500 MMS; 1-yr recording" },
+  { id: "zuper_connect_plus", name: "Zuper Connect – Plus", price: 299, group: "Zuper Connect", description: "Advanced telephony with call masking, ring groups, voicemails. 3 numbers, 25 users, 5,000 mins, 3,000 SMS, 1,000 MMS; 1-yr recording" },
+  { id: "zuper_connect_intelligence", name: "Zuper Connect – Intelligence", price: 499, group: "Zuper Connect", description: "AI telephony with summaries, responder, 3-yr storage. 5 numbers, 25 users, 5,000 mins, 6,000 SMS, 2,000 MMS; 200 AI calls" },
   // Zuper Fleet
-  { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, group: "Zuper Fleet", description: "GPS tracking, AI safety cams, health monitoring" },
-  { id: "zuper_fleet_safetycam", name: "Zuper Fleet – SafetyCam AI", price: 35, group: "Zuper Fleet", description: "Dashcam for driver monitoring, safety scoring" },
-  { id: "zuper_fleet_gps", name: "Zuper Fleet – GPS with Vehicle Health", price: 30, group: "Zuper Fleet", description: "Real-time GPS, predictive alerts" },
-  // Platform Features (included in Roofing, add-on for Non-Roofing)
-  { id: "customer_portal", name: "Customer Portal", price: 50, group: "Platform Features", description: "Branded self-service portal for jobs, invoices, and requests" },
-  { id: "report_builder", name: "Report Builder", price: 75, group: "Platform Features", description: "Advanced reporting for custom dashboards and KPIs" },
-  { id: "workflow_builder", name: "Workflow Builder", price: 80, group: "Platform Features", description: "Visual automation for processes (up to 5,000 executions/mo)" },
-  { id: "platform_maintenance", name: "Platform Maintenance Fee", price: 100, group: "Platform Features", description: "Annual infrastructure, maintenance, and compliance" },
+  { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, group: "Zuper Fleet", unit: "vehicle", description: "GPS tracking, AI safety cams, health monitoring" },
+  { id: "zuper_fleet_safetycam", name: "Zuper Fleet – SafetyCam AI", price: 35, group: "Zuper Fleet", unit: "vehicle", description: "Dashcam for driver monitoring, safety scoring" },
+  { id: "zuper_fleet_gps", name: "Zuper Fleet – GPS with Vehicle Health", price: 30, group: "Zuper Fleet", unit: "vehicle", description: "Real-time GPS, predictive alerts" },
 ];
 
 const getLicenseLabel = (type: string) => {
@@ -732,19 +727,12 @@ export default function EditSubscriptionModal({
                     <div key={group}>
                       <div className="px-5 py-2 bg-gray-50 border-b border-gray-100 sticky top-0">
                         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{group}</span>
-                        {group === "Platform Features" && plan.startsWith("roofing_") && (
-                          <span className="ml-2 text-xs text-green-600">✓ Included in Roofing plan</span>
-                        )}
-                        {group === "Platform Features" && !plan.startsWith("roofing_") && (
-                          <span className="ml-2 text-xs text-amber-600">Add-on for Non-Roofing plans</span>
-                        )}
                       </div>
                       {filtered.filter(a => a.group === group).map((addon) => {
-                        const isIncluded = addon.group === "Platform Features" && plan.startsWith("roofing_");
-                        const isSelected = isIncluded || selectedAddons.includes(addon.id);
+                        const isSelected = selectedAddons.includes(addon.id);
                         const prevAddonIds = currentSubscription.addons.map(a => a.id);
                         const wasSelected = prevAddonIds.includes(addon.id);
-                        const isChanged = !isIncluded && isSelected !== wasSelected;
+                        const isChanged = isSelected !== wasSelected;
                         const discount = addonDiscounts[addon.id] || { discountType: "none", discountValue: 0 };
                         const hasDiscount = discount.discountType !== "none" && discount.discountValue > 0;
                         const discountedPrice = calculateAddonDiscountedPrice(addon);
@@ -755,34 +743,27 @@ export default function EditSubscriptionModal({
                           <div
                             key={addon.id}
                             className={`border-b border-gray-100 last:border-b-0 transition-colors ${
-                              isIncluded ? "bg-green-50" : isSelected ? "bg-blue-50" : "hover:bg-gray-50"
+                              isSelected ? "bg-blue-50" : "hover:bg-gray-50"
                             }`}
                           >
                             <div
-                              onClick={() => !isIncluded && toggleAddon(addon.id)}
-                              className={`flex items-center justify-between px-5 py-3 ${isIncluded ? "cursor-default" : "cursor-pointer"}`}
+                              onClick={() => toggleAddon(addon.id)}
+                              className="flex items-center justify-between px-5 py-3 cursor-pointer"
                             >
                               <div className="flex items-center gap-3 flex-1 min-w-0">
                                 <button
                                   type="button"
                                   className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
-                                    isIncluded
-                                      ? "bg-green-500"
-                                      : isSelected 
+                                    isSelected 
                                       ? "bg-blue-500" 
                                       : "border-2 border-gray-300 bg-white hover:border-gray-400"
                                   }`}
                                 >
-                                  {(isSelected || isIncluded) && <Check className="w-3 h-3 text-white" />}
+                                  {isSelected && <Check className="w-3 h-3 text-white" />}
                                 </button>
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
                                     <span className="text-sm font-medium text-gray-900 truncate">{addon.name}</span>
-                                    {isIncluded && (
-                                      <span className="text-xs font-medium px-1.5 py-0.5 rounded flex-shrink-0 bg-green-100 text-green-700">
-                                        Included
-                                      </span>
-                                    )}
                                     {isChanged && (
                                       <span className={`text-xs font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${
                                         isSelected ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
@@ -795,9 +776,7 @@ export default function EditSubscriptionModal({
                                 </div>
                               </div>
                               <div className="ml-4 flex-shrink-0 text-right">
-                                {isIncluded ? (
-                                  <span className="text-sm font-medium text-green-600">$0</span>
-                                ) : addon.group === "Seats" && hasDiscount ? (
+                                {addon.group === "Seats" && hasDiscount ? (
                                   <div className="flex flex-col items-end">
                                     <span className="text-xs text-gray-400 line-through">{formatCurrency(addon.price * qty)}/mo</span>
                                     <span className="text-sm font-semibold text-green-600">{formatCurrency(lineTotal)}/mo</span>
@@ -810,17 +789,17 @@ export default function EditSubscriptionModal({
                                   </div>
                                 ) : hasDiscount ? (
                                   <div className="flex flex-col items-end">
-                                    <span className="text-xs text-gray-400 line-through">{formatCurrency(addon.price)}/mo</span>
-                                    <span className="text-sm font-semibold text-green-600">{formatCurrency(discountedPrice)}/mo</span>
+                                    <span className="text-xs text-gray-400 line-through">{formatCurrency(addon.price)}{addon.unit ? `/${addon.unit}` : ""}/mo</span>
+                                    <span className="text-sm font-semibold text-green-600">{formatCurrency(discountedPrice)}{addon.unit ? `/${addon.unit}` : ""}/mo</span>
                                   </div>
                                 ) : (
-                                  <span className="text-sm font-semibold text-gray-900">{formatCurrency(addon.price)}/mo</span>
+                                  <span className="text-sm font-semibold text-gray-900">{formatCurrency(addon.price)}{addon.unit ? `/${addon.unit}` : ""}/mo</span>
                                 )}
                               </div>
                             </div>
                             
-                            {/* Quantity & Discount controls for selected addons (not for included) */}
-                            {isSelected && !isIncluded && (
+                            {/* Quantity & Discount controls for selected addons */}
+                            {isSelected && (
                               <div className="px-5 pb-3 space-y-2" onClick={(e) => e.stopPropagation()}>
                                 {/* Quantity - only for seat-type add-ons */}
                                 {addon.group === "Seats" && (

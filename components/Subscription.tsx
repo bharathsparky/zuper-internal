@@ -56,13 +56,9 @@ const mockSubscription = {
     },
   ],
   addons: [
-    { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, quantity: 5, group: "Seats", description: "Login, time tracking, geo tracking, basic job view", discountType: "none" as const, discountValue: 0 },
-    { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, group: "Zuper Connect", description: "SMS/MMS telephony with call flows, recording, CRM sync", discountType: "none" as const, discountValue: 0 },
-    { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, group: "Zuper Fleet", description: "GPS tracking, AI safety cams, health monitoring", discountType: "none" as const, discountValue: 0 },
-    { id: "customer_portal", name: "Customer Portal", price: 0, group: "Platform Features", description: "Branded self-service portal for jobs, invoices, and requests", discountType: "none" as const, discountValue: 0 },
-    { id: "report_builder", name: "Report Builder", price: 0, group: "Platform Features", description: "Advanced reporting for custom dashboards and KPIs", discountType: "none" as const, discountValue: 0 },
-    { id: "workflow_builder", name: "Workflow Builder", price: 0, group: "Platform Features", description: "Visual automation for processes (up to 5,000 executions/mo)", discountType: "none" as const, discountValue: 0 },
-    { id: "platform_maintenance", name: "Platform Maintenance Fee", price: 0, group: "Platform Features", description: "Annual infrastructure, maintenance, and compliance", discountType: "none" as const, discountValue: 0 },
+    { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, quantity: 5, group: "Seats", unit: "seat", description: "Login, time tracking, geo tracking, basic job view", discountType: "none" as const, discountValue: 0 },
+    { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, quantity: 1, group: "Zuper Connect", description: "SMS/MMS telephony with call flows, recording, notes, CRM sync. 1 number, 25 users, 2,500 mins, 2,000 SMS, 500 MMS; 1-yr recording", discountType: "none" as const, discountValue: 0 },
+    { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, quantity: 1, group: "Zuper Fleet", unit: "vehicle", description: "GPS tracking, AI safety cams, health monitoring", discountType: "none" as const, discountValue: 0 },
   ],
   oneTimeCharges: [
     { id: "implementation", name: "Implementation Fee", amount: 2500, status: "paid" as const, paidDate: "2024-10-15", discountType: "none" as const, discountValue: 0 },
@@ -456,10 +452,8 @@ export default function Subscription() {
                     {subscription.addons.length > 0 ? (
                       <div className="space-y-3">
                         {(() => {
-                          const isRoofing = subscription.planType.startsWith("roofing_");
                           const seatAddons = subscription.addons.filter(a => a.group === "Seats");
                           const paidAddons = subscription.addons.filter(a => a.group !== "Seats" && a.group !== "Platform Features");
-                          const includedAddons = subscription.addons.filter(a => a.group === "Platform Features");
                           const paidGroups = [...new Set(paidAddons.map(a => a.group))];
 
                           return (
@@ -476,12 +470,7 @@ export default function Subscription() {
                                   <div key={addon.id} className="bg-white rounded-lg border border-gray-200 p-4">
                                     <div className="flex items-start justify-between mb-3">
                                       <div>
-                                        <div className="flex items-center gap-2">
-                                          <h4 className="text-sm font-semibold text-gray-900">{addon.name}</h4>
-                                          <span className="inline-flex items-center px-1.5 py-0.5 bg-purple-50 text-purple-700 text-xs font-medium rounded">
-                                            Seat-based
-                                          </span>
-                                        </div>
+                                        <h4 className="text-sm font-semibold text-gray-900">{addon.name}</h4>
                                         {addon.description && (
                                           <p className="text-xs text-gray-500 mt-0.5">{addon.description}</p>
                                         )}
@@ -553,11 +542,11 @@ export default function Subscription() {
                                               <div className="flex-shrink-0 ml-4 text-right">
                                                 {hasDiscount ? (
                                                   <div className="flex flex-col items-end">
-                                                    <span className="text-xs text-gray-400 line-through">{formatCurrency(addon.price)}/mo</span>
-                                                    <span className="text-sm font-semibold text-green-600">{formatCurrency(discountedPrice)}/mo</span>
+                                                    <span className="text-xs text-gray-400 line-through">{formatCurrency(addon.price)}{addon.unit ? `/${addon.unit}` : ""}/mo</span>
+                                                    <span className="text-sm font-semibold text-green-600">{formatCurrency(discountedPrice)}{addon.unit ? `/${addon.unit}` : ""}/mo</span>
                                                   </div>
                                                 ) : (
-                                                  <span className="text-sm font-semibold text-gray-900">{formatCurrency(addon.price)}/mo</span>
+                                                  <span className="text-sm font-semibold text-gray-900">{formatCurrency(addon.price)}{addon.unit ? `/${addon.unit}` : ""}/mo</span>
                                                 )}
                                               </div>
                                             </div>
@@ -569,66 +558,6 @@ export default function Subscription() {
                                 </div>
                               )}
 
-                              {/* Platform Features — Included in Roofing */}
-                              {includedAddons.length > 0 && isRoofing && (
-                                <div className="rounded-lg border border-green-200 overflow-hidden">
-                                  <div className="px-4 py-2.5 bg-green-50 flex items-center gap-2">
-                                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
-                                    <span className="text-xs font-semibold text-green-700 uppercase tracking-wider">Included with Roofing Plan</span>
-                                  </div>
-                                  <div className="bg-green-50/30 px-4 py-3">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
-                                      {includedAddons.map((addon) => (
-                                        <div key={addon.id} className="flex items-start gap-2.5">
-                                          <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                          <div className="min-w-0">
-                                            <span className="text-sm font-medium text-gray-900">{addon.name}</span>
-                                            {addon.description && (
-                                              <p className="text-xs text-gray-500 mt-0.5">{addon.description}</p>
-                                            )}
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Platform Features — Paid (Non-Roofing) */}
-                              {includedAddons.length > 0 && !isRoofing && (
-                                <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
-                                  <div className="px-4 py-2 bg-gray-50/70">
-                                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Platform Features</span>
-                                  </div>
-                                  <div className="divide-y divide-gray-50">
-                                    {includedAddons.map((addon) => {
-                                      const hasDiscount = addon.discountType && addon.discountType !== "none" && addon.discountValue > 0;
-                                      const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType || "none", addon.discountValue || 0);
-
-                                      return (
-                                        <div key={addon.id} className="flex items-center justify-between px-4 py-3">
-                                          <div className="min-w-0 flex-1">
-                                            <span className="text-sm font-medium text-gray-900">{addon.name}</span>
-                                            {addon.description && (
-                                              <p className="text-xs text-gray-500 mt-0.5">{addon.description}</p>
-                                            )}
-                                          </div>
-                                          <div className="flex-shrink-0 ml-4 text-right">
-                                            {hasDiscount ? (
-                                              <div className="flex flex-col items-end">
-                                                <span className="text-xs text-gray-400 line-through">{formatCurrency(addon.price)}/mo</span>
-                                                <span className="text-sm font-semibold text-green-600">{formatCurrency(discountedPrice)}/mo</span>
-                                              </div>
-                                            ) : (
-                                              <span className="text-sm font-semibold text-gray-900">{formatCurrency(addon.price)}/mo</span>
-                                            )}
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              )}
                             </>
                           );
                         })()}
