@@ -8362,7 +8362,97 @@ Now update the Edit modal — make qty controls conditional on `addon.group === 
 
 <details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
 
-Status: **loading**
+**Chunk 1**
+Lines added: 9, lines removed: 2
+
+```diff
+@@ -798,15 +798,22 @@
+                                  {isIncluded ? (
+                                    &lt;span className="text-sm font-medium text-green-600"&gt;$0&lt;/span&gt;
+-                                 ) : hasDiscount ? (
++                                 ) : addon.group === "Seats" &amp;&amp; hasDiscount ? (
+                                    &lt;div className="flex flex-col items-end"&gt;
+                                      &lt;span className="text-xs text-gray-400 line-through"&gt;{formatCurrency(addon.price * qty)}/mo&lt;/span&gt;
+                                      &lt;span className="text-sm font-semibold text-green-600"&gt;{formatCurrency(lineTotal)}/mo&lt;/span&gt;
+                                      {qty &gt; 1 &amp;&amp; &lt;span className="text-xs text-gray-400"&gt;{formatCurrency(discountedPrice)} each&lt;/span&gt;}
+                                    &lt;/div&gt;
+-                                 ) : (
++                                 ) : addon.group === "Seats" ? (
+                                    &lt;div className="flex flex-col items-end"&gt;
+                                      &lt;span className="text-sm font-semibold text-gray-900"&gt;{formatCurrency(lineTotal)}/mo&lt;/span&gt;
+                                      {qty &gt; 1 &amp;&amp; &lt;span className="text-xs text-gray-400"&gt;{formatCurrency(addon.price)} each&lt;/span&gt;}
+                                    &lt;/div&gt;
++                                 ) : hasDiscount ? (
++                                   &lt;div className="flex flex-col items-end"&gt;
++                                     &lt;span className="text-xs text-gray-400 line-through"&gt;{formatCurrency(addon.price)}/mo&lt;/span&gt;
++                                     &lt;span className="text-sm font-semibold text-green-600"&gt;{formatCurrency(discountedPrice)}/mo&lt;/span&gt;
++                                   &lt;/div&gt;
++                                 ) : (
++                                   &lt;span className="text-sm font-semibold text-gray-900"&gt;{formatCurrency(addon.price)}/mo&lt;/span&gt;
+                                  )}
+                                &lt;/div&gt;
+```
+
+**Chunk 2**
+Lines added: 26, lines removed: 24
+
+```diff
+@@ -816,28 +823,30 @@
+                              {isSelected &amp;&amp; !isIncluded &amp;&amp; (
+                                &lt;div className="px-5 pb-3 space-y-2" onClick={(e) =&gt; e.stopPropagation()}&gt;
+-                                 {/* Quantity */}
+-                                 &lt;div className="flex items-center gap-2 pl-8"&gt;
+-                                   &lt;span className="text-xs font-medium text-gray-500"&gt;Qty:&lt;/span&gt;
+-                                   &lt;div className="inline-flex items-center h-7 bg-white border border-gray-300 rounded-md overflow-hidden"&gt;
+-                                     &lt;button
+-                                       onClick={() =&gt; updateAddonQuantity(addon.id, qty - 1)}
+-                                       className="w-7 h-full flex items-center justify-center hover:bg-gray-50"
+-                                     &gt;
+-                                       &lt;Minus className="w-3 h-3 text-gray-600" /&gt;
+-                                     &lt;/button&gt;
+-                                     &lt;input
+-                                       type="number"
+-                                       value={qty}
+-                                       onChange={(e) =&gt; updateAddonQuantity(addon.id, parseInt(e.target.value) || 1)}
+-                                       className="w-10 h-full text-center text-xs font-medium border-x border-gray-300 focus:outline-none [appearance:textfield] [&amp;::-webkit-outer-spin-button]:appearance-none [&amp;::-webkit-inner-spin-button]:appearance-none"
+-                                     /&gt;
+-                                     &lt;button
+-                                       onClick={() =&gt; updateAddonQuantity(addon.id, qty + 1)}
+-                                       className="w-7 h-full flex items-center justify-center hover:bg-gray-50"
+-                                     &gt;
+-                                       &lt;Plus className="w-3 h-3 text-gray-600" /&gt;
+-                                     &lt;/button&gt;
+-                                   &lt;/div&gt;
+-                                 &lt;/div&gt;
++                                 {/* Quantity - only for seat-type add-ons */}
++                                 {addon.group === "Seats" &amp;&amp; (
++                                   &lt;div className="flex items-center gap-2 pl-8"&gt;
++                                     &lt;span className="text-xs font-medium text-gray-500"&gt;Qty:&lt;/span&gt;
++                                     &lt;div className="inline-flex items-center h-7 bg-white border border-gray-300 rounded-md overflow-hidden"&gt;
++                                       &lt;button
++                                         onClick={() =&gt; updateAddonQuantity(addon.id, qty - 1)}
++                                         className="w-7 h-full flex items-center justify-center hover:bg-gray-50"
++                                       &gt;
++                                         &lt;Minus className="w-3 h-3 text-gray-600" /&gt;
++                                       &lt;/button&gt;
++                                       &lt;input
++                                         type="number"
++                                         value={qty}
++                                         onChange={(e) =&gt; updateAddonQuantity(addon.id, parseInt(e.target.value) || 1)}
++                                         className="w-10 h-full text-center text-xs font-medium border-x border-gray-300 focus:outline-none [appearance:textfield] [&amp;::-webkit-outer-spin-button]:appearance-none [&amp;::-webkit-inner-spin-button]:appearance-none"
++                                       /&gt;
++                                       &lt;button
++                                         onClick={() =&gt; updateAddonQuantity(addon.id, qty + 1)}
++                                         className="w-7 h-full flex items-center justify-center hover:bg-gray-50"
++                                       &gt;
++                                         &lt;Plus className="w-3 h-3 text-gray-600" /&gt;
++                                       &lt;/button&gt;
++                                     &lt;/div&gt;
++                                   &lt;/div&gt;
++                                 )}
+                                  {/* Discount */}
+                                  &lt;div className="flex items-center gap-2 pl-8"&gt;
+```
 
 </details>
 
@@ -8370,15 +8460,26 @@ Status: **loading**
 
 ---
 
-
+Also update the saving text for non-seat addons (it shouldn't multiply by qty):
 
 ---
 
 <tool-use data-tool-type="write" data-tool-name="search_replace">
 
-<details><summary>Tool use: **search_replace**</summary>
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
 
-Status: **loading**
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -891,5 +891,5 @@
+                                    {hasDiscount &amp;&amp; (
+                                      &lt;span className="text-xs text-green-600 font-medium"&gt;
+-                                       Saving {formatCurrency((addon.price - discountedPrice) * qty)}/mo
++                                       Saving {formatCurrency((addon.price - discountedPrice) * (addon.group === "Seats" ? qty : 1))}/mo
+                                      &lt;/span&gt;
+                                    )}
+```
 
 </details>
 
@@ -8386,12 +8487,357 @@ Status: **loading**
 
 ---
 
-
+Now build and push:
 
 ---
 
 <tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
-<details><summary>Tool use: **run_terminal_cmd**</summary>
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd /Users/bharath.s/zuper-internal-admin && npm run build 2>&1 | tail -20</summary>
+
+```bash
+cd /Users/bharath.s/zuper-internal-admin && npm run build 2>&1 | tail -20
+```
+
+```
+   Generating static pages using 7 workers (0/9) ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+   Generating static pages using 7 workers (2/9) 
+   Generating static pages using 7 workers (4/9) 
+   Generating static pages using 7 workers (6/9) 
+ ✓ Generating static pages using 7 workers (9/9) in 306.5ms
+   Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /questbook
+├ ○ /settings/proposal-templates
+├ ○ /settings/proposal-templates/addons/new
+├ ○ /settings/proposal-templates/service-packages/edit
+└ ○ /settings/proposal-templates/service-packages/new
+
+
+○  (Static)  prerendered as static content
+
+
+```
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd /Users/bharath.s/zuper-internal-admin && git add -A && git commit -m "Restrict quantity controls to Basic Seat (Crew) only - other addons are feature-based (on/off)" && git push</summary>
+
+```bash
+cd /Users/bharath.s/zuper-internal-admin && git add -A && git commit -m "Restrict quantity controls to Basic Seat (Crew) only - other addons are feature-based (on/off)" && git push
+```
+
+```
+[main 6716298] Restrict quantity controls to Basic Seat (Crew) only - other addons are feature-based (on/off)
+ 4 files changed, 986 insertions(+), 34 deletions(-)
+To github.com:bharathsparky/zuper-internal.git
+   d592418..6716298  main -&gt; main
+
+```
+</details>
+</tool-use>
+
+---
+
+Done! Here's the fix:
+
+- **Basic Seat (Crew)** — the only add-on with quantity support. Shows a `×5` badge on the details page, qty stepper in create/edit modals, and "each" pricing breakdown.
+- **All other add-ons** (Zuper Connect, Zuper Fleet, Platform Features) — feature-based, on/off only. No quantity field, no qty controls. Just a flat monthly price with optional discount.
+
+---
+
+_**User (2026-02-17 07:58Z)**_
+
+Also on the details page can we improve the add-ons design, it feels clunky and not proeprly designed . we are not showing qty for basic seat? can we make it better?
+
+---
+
+_**Agent (model claude-4.6-opus-high-thinking, mode Agent)**_
+
+
+
+Let me first check the current state of the details page add-ons section and see it live.
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+I see the issues:
+1. The qty badge (`×5`) shows but only when `qty > 1` — and Basic Seat has `quantity: 5` so it should show. But looking more carefully, the Basic Seat in mock data has `quantity: 5` which is > 1, so the badge should show. Let me check... yes it should be showing. But the user says it's not showing qty. Let me re-read the mock data.
+
+Actually wait, let me re-read the current mock data to see if the quantity field is still there after my last edit:
+
+```
+{ id: "basic_seat", name: "Basic Seat (Crew)", price: 20, quantity: 5, group: "Seats", ...
+
+
+```
+
+Yes, `quantity: 5` is there. The `×5` badge should show. And for the price, it should show `$100/mo` with `$20 each` underneath.
+
+The current design feels clunky with individual bordered cards for each addon and disconnected group headers. I should redesign this with a cleaner table-like layout within each group, showing quantity as a separate column for Basic Seat, using a simple list with checkmarks for features, and making Platform Features visually distinct as included items with better overall hierarchy.
+
+```</details></think>
+
+---
+
+Let me look at the live page to see the current state, then I'll redesign it.
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="list_dir">
+<details>
+            <summary>Tool use: **list_dir** • Listed directory, 0 results</summary>
+        
+No results found
+</details>
+</tool-use>
+
+---
+
+Dev server is running. Let me take a screenshot to see the current design:
+
+---
+
+<tool-use data-tool-type="mcp" data-tool-name="mcp_cursor-ide-browser_browser_navigate">
+<details>
+          <summary>Tool use: **mcp_cursor-ide-browser_browser_navigate**</summary>
+      
+*Called tool*: cursor-ide-browser - browser_navigate: Navigate to a URL
+
+*Parameters*:
+  * url: http://localhost:3000
+
+*Result*:
+### Action: snapshot
+
+### Page state
+- Page URL: http://localhost:3000/
+- Page Title: Zuper IQ - Intelligent Quoting
+- Page Snapshot:
+```yaml
+- role: generic
+  ref: ref-buzuq15gk6v
+  children:
+    - role: generic
+      ref: ref-wx3ncdmlva
+      children:
+        - role: banner
+          ref: ref-tw56wwkojis
+          children:
+            - role: generic
+              ref: ref-dpg6rilaent
+              children:
+                - role: generic
+                  ref: ref-rrhqh3786us
+                  children:
+                    - role: link
+                      ref: ref-dr0kj73qqfj
+                      children:
+                        - role: img
+                          ref: ref-np5yi7hi8ok
+                    - role: generic
+                      ref: ref-mydqtubpt7i
+                      children:
+                        - role: generic
+                          ref: ref-ilixksght8
+                          children:
+                            - role: button
+                              name: ap- outhea t-2
+                              ref: ref-5c60apxr3i2
+                        - role: button
+                          ref: ref-yr52w9ew4lg
+            - role: generic
+              ref: ref-63hp15fvbd3
+              children:
+                - role: navigation
+                  ref: ref-bsmdskue6mu
+                  children:
+                    - role: link
+                      name: Cu tomer
+                      ref: ref-25qyca5g1s5
+                    - role: link
+                      name: Co-worker
+                      ref: ref-5j6s982kxrr
+                    - role: link
+                      name: Migration
+                      ref: ref-1po3de3b9zd
+                    - role: link
+                      name: Setting
+                      ref: ref-2ahz1cz135w
+        - role: main
+          ref: ref-lco03a3obd9
+          children:
+            - role: generic
+              ref: ref-d39itxlau9l
+              children:
+                - role: generic
+                  ref: ref-3wqg2uk0j1t
+                  children:
+                    - role: generic
+                      ref: ref-qklywe6zgq9
+                      children:
+                        - role: aside
+                          ref: ref-sa8l2o2bub
+                          children:
+                            - role: navigation
+                              ref: ref-i7a417tziwe
+                              children:
+                                - role: list
+                                  ref: ref-4bm9qn5bzmb
+                                  children:
+                                    - role: listitem
+                                      name: Account Detail
+                                      ref: ref-c5q0sf6pbu6
+                                      children:
+                                        - role: button
+                                          name: Account Detail
+                                          ref: ref-zti992agy7r
+                                    - role: listitem
+                                      name: U er
+                                      ref: ref-ttveenkrnyn
+                                      children:
+                                        - role: button
+                                          name: U er
+                                          ref: ref-ivuevt2gx8
+                                    - role: listitem
+                                      name: Module Acce
+                                      ref: ref-naj4wd917v
+                                      children:
+                                        - role: button
+                                          name: Module Acce
+                                          ref: ref-zgr0mxzc5p
+                                    - role: listitem
+                                      name: Policy
+                                      ref: ref-bxx9uckoqmq
+                                      children:
+                                        - role: button
+                                          name: Policy
+                                          ref: ref-ghteklabqgl
+                                    - role: listitem
+                                      name: Sub cription Active
+                                      ref: ref-gexcn1z2tk5
+                                      children:
+                                        - role: button
+                                          name: Sub cription Active
+                                          ref: ref-h595r2t0gqb
+                                    - role: listitem
+                                      name: Zuper Pay
+                                      ref: ref-xtxootjq53
+                                      children:
+                                        - role: button
+                                          name: Zuper Pay
+                                          ref: ref-4dfw95j9jec
+                                    - role: listitem
+                                      name: Credential 0
+                                      ref: ref-nmvpt9j7oq9
+                                      children:
+                                        - role: button
+                                          name: Credential 0
+                                          ref: ref-zzchwhry4x
+                                    - role: listitem
+                                      name: Note 0
+                                      ref: ref-1g8ynaeyrnjh
+                                      children:
+                                        - role: button
+                                          name: Note 0
+                                          ref: ref-ba4d62b987s
+                                    - role: listitem
+                                      name: In ight
+                                      ref: ref-acweakt6mgl
+                                      children:
+                                        - role: button
+                                          name: In ight
+                                          ref: ref-zq5x052i9ap
+                                    - role: listitem
+                                      name: Activity
+                                      ref: ref-ez0996yxtua
+                                      children:
+                                        - role: button
+                                          name: Activity
+                                          ref: ref-o8t3gab7yua
+                    - role: generic
+                      ref: ref-644axuv6z29
+                      children:
+                        - role: generic
+                          ref: ref-jcjydudyg1n
+                          children:
+                            - role: generic
+                              ref: ref-mn155n28qw
+                              children:
+                                - role: generic
+                                  ref: ref-o0o8mc0yc3
+                                  children:
+                                    - role: heading
+                                      name: Account Detail
+                                      ref: ref-zvtb2mevqn9
+                                    - role: generic
+                                      ref: ref-1vaatn0ld3t
+                                      children:
+                                        - role: button
+                                          ref: ref-9t99pk4cn4u
+                                        - role: button
+                                          ref: ref-mk28sob6j5d
+                            - role: generic
+                              ref: ref-t9ui2w33n3
+                              children:
+                                - role: generic
+                                  ref: ref-x5sciitb1xf
+                                  children:
+                                    - role: generic
+                                      ref: ref-mc3hi0ax04a
+                                      children:
+                                        - role: textbox
+                                          name: Search Coworkers...
+                                          ref: ref-kh45fvedmuj
+                                - role: generic
+                                  ref: ref-07glx16llle3
+                                  children:
+                                    - role: generic
+                                      ref: ref-6zhe4jcqc4i
+                                      children:
+                                        - role: button
+                                          ref: ref-22kh28qjuot
+                                        - role: button
+                                          name: 1
+                                          ref: ref-w72bnbylc2
+                                        - role: button
+                                          ref: ref-xtabrh688bo
+        - role: contentinfo
+          ref: ref-x70xlid9xb
+          children:
+            - role: generic
+              name: © Zuper, Inc. All right  re erved.
+              ref: ref-y6e3oojm7d
+```
+</details>
+</tool-use>
+
+---
+
+I need to navigate to the Subscription tab:
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="mcp_cursor-ide-browser_browser_click">
+<details>
+<summary>Tool use: **mcp_cursor-ide-browser_browser_click**</summary>
+
+Status: **loading**
+
 
 </details>
 </tool-use>

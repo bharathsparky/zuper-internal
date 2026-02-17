@@ -454,89 +454,183 @@ export default function Subscription() {
                 {isAddonsExpanded && (
                   <div className="px-5 pb-5">
                     {subscription.addons.length > 0 ? (
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         {(() => {
-                          const groups = [...new Set(subscription.addons.map(a => a.group))];
                           const isRoofing = subscription.planType.startsWith("roofing_");
-                          return groups.map(group => (
-                            <div key={group}>
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{group}</span>
-                                {group === "Platform Features" && isRoofing && (
-                                  <span className="text-xs text-green-600 font-medium">✓ Included in Roofing plan</span>
-                                )}
-                              </div>
-                              <div className="space-y-2">
-                                {subscription.addons.filter(a => a.group === group).map((addon) => {
-                                  const isIncluded = group === "Platform Features" && isRoofing;
-                                  const hasDiscount = addon.discountType && addon.discountType !== "none" && addon.discountValue > 0;
-                                  const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType || "none", addon.discountValue || 0);
-                                  const qty = addon.quantity || 1;
-                                  const lineTotal = discountedPrice * qty;
-                                  const originalLineTotal = addon.price * qty;
+                          const seatAddons = subscription.addons.filter(a => a.group === "Seats");
+                          const paidAddons = subscription.addons.filter(a => a.group !== "Seats" && a.group !== "Platform Features");
+                          const includedAddons = subscription.addons.filter(a => a.group === "Platform Features");
+                          const paidGroups = [...new Set(paidAddons.map(a => a.group))];
 
-                                  return (
-                                    <div
-                                      key={addon.id}
-                                      className={`flex items-center justify-between py-3 px-4 rounded-lg border ${
-                                        isIncluded ? "bg-green-50 border-green-200" : "bg-white border-gray-200"
-                                      }`}
-                                    >
-                                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                                        <div className="min-w-0">
-                                          <div className="flex items-center gap-2">
-                                            <span className="text-sm font-medium text-gray-900">{addon.name}</span>
-                                            {qty > 1 && (
-                                              <span className="inline-flex items-center px-1.5 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded">
-                                                ×{qty}
-                                              </span>
-                                            )}
-                                          </div>
-                                          {addon.description && (
-                                            <p className="text-xs text-gray-500">{addon.description}</p>
-                                          )}
-                                          {hasDiscount && (
-                                            <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full">
-                                              <Tag className="w-3 h-3" />
-                                              {(addon.discountType as "fixed" | "percentage") === "fixed" ? `$${addon.discountValue} off` : `${addon.discountValue}% off`}
-                                            </span>
-                                          )}
+                          return (
+                            <>
+                              {/* Seat-based Add-ons — Featured Card with Grid */}
+                              {seatAddons.map(addon => {
+                                const hasDiscount = addon.discountType && addon.discountType !== "none" && addon.discountValue > 0;
+                                const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType || "none", addon.discountValue || 0);
+                                const qty = addon.quantity || 1;
+                                const lineTotal = discountedPrice * qty;
+                                const originalLineTotal = addon.price * qty;
+
+                                return (
+                                  <div key={addon.id} className="bg-white rounded-lg border border-gray-200 p-4">
+                                    <div className="flex items-start justify-between mb-3">
+                                      <div>
+                                        <div className="flex items-center gap-2">
+                                          <h4 className="text-sm font-semibold text-gray-900">{addon.name}</h4>
+                                          <span className="inline-flex items-center px-1.5 py-0.5 bg-purple-50 text-purple-700 text-xs font-medium rounded">
+                                            Seat-based
+                                          </span>
                                         </div>
-                                      </div>
-                                      <div className="flex-shrink-0 ml-4 text-right">
-                                        {isIncluded ? (
-                                          <span className="text-sm font-medium text-green-600">Included</span>
-                                        ) : hasDiscount ? (
-                                          <div className="flex flex-col items-end">
-                                            <span className="text-xs text-gray-400 line-through">
-                                              {formatCurrency(originalLineTotal)}/mo
-                                            </span>
-                                            <span className="text-sm font-medium text-green-600">
-                                              {formatCurrency(lineTotal)}/mo
-                                            </span>
-                                            {qty > 1 && (
-                                              <span className="text-xs text-gray-400">
-                                                {formatCurrency(discountedPrice)} each
-                                              </span>
-                                            )}
-                                          </div>
-                                        ) : (
-                                          <div className="flex flex-col items-end">
-                                            <span className="text-sm font-medium text-gray-900">{formatCurrency(lineTotal)}/mo</span>
-                                            {qty > 1 && (
-                                              <span className="text-xs text-gray-400">
-                                                {formatCurrency(addon.price)} each
-                                              </span>
-                                            )}
-                                          </div>
+                                        {addon.description && (
+                                          <p className="text-xs text-gray-500 mt-0.5">{addon.description}</p>
                                         )}
                                       </div>
                                     </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          ));
+                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                      <div>
+                                        <p className="text-xs font-medium text-gray-500 mb-1">Quantity</p>
+                                        <p className="text-sm font-semibold text-gray-900">{qty}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-xs font-medium text-gray-500 mb-1">Price/Seat</p>
+                                        <p className="text-sm font-semibold text-gray-900">{formatCurrency(addon.price)}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-xs font-medium text-gray-500 mb-1">Discount</p>
+                                        {hasDiscount ? (
+                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full">
+                                            <Tag className="w-3 h-3" />
+                                            {(addon.discountType as string) === "fixed" ? `$${addon.discountValue} off` : `${addon.discountValue}% off`}
+                                          </span>
+                                        ) : (
+                                          <span className="text-xs text-gray-400">—</span>
+                                        )}
+                                      </div>
+                                      <div>
+                                        <p className="text-xs font-medium text-gray-500 mb-1">Total</p>
+                                        {hasDiscount ? (
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-xs text-gray-400 line-through">{formatCurrency(originalLineTotal)}</span>
+                                            <span className="text-sm font-semibold text-green-600">{formatCurrency(lineTotal)}/mo</span>
+                                          </div>
+                                        ) : (
+                                          <p className="text-sm font-semibold text-gray-900">{formatCurrency(lineTotal)}/mo</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+
+                              {/* Paid Service Add-ons — Clean Grouped Table */}
+                              {paidAddons.length > 0 && (
+                                <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
+                                  {paidGroups.map((group) => (
+                                    <div key={group}>
+                                      <div className="px-4 py-2 bg-gray-50/70">
+                                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{group}</span>
+                                      </div>
+                                      <div className="divide-y divide-gray-50">
+                                        {paidAddons.filter(a => a.group === group).map((addon) => {
+                                          const hasDiscount = addon.discountType && addon.discountType !== "none" && addon.discountValue > 0;
+                                          const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType || "none", addon.discountValue || 0);
+
+                                          return (
+                                            <div key={addon.id} className="flex items-center justify-between px-4 py-3">
+                                              <div className="min-w-0 flex-1">
+                                                <span className="text-sm font-medium text-gray-900">{addon.name}</span>
+                                                {addon.description && (
+                                                  <p className="text-xs text-gray-500 mt-0.5">{addon.description}</p>
+                                                )}
+                                                {hasDiscount && (
+                                                  <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full">
+                                                    <Tag className="w-3 h-3" />
+                                                    {(addon.discountType as "fixed" | "percentage") === "fixed" ? `$${addon.discountValue} off` : `${addon.discountValue}% off`}
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <div className="flex-shrink-0 ml-4 text-right">
+                                                {hasDiscount ? (
+                                                  <div className="flex flex-col items-end">
+                                                    <span className="text-xs text-gray-400 line-through">{formatCurrency(addon.price)}/mo</span>
+                                                    <span className="text-sm font-semibold text-green-600">{formatCurrency(discountedPrice)}/mo</span>
+                                                  </div>
+                                                ) : (
+                                                  <span className="text-sm font-semibold text-gray-900">{formatCurrency(addon.price)}/mo</span>
+                                                )}
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Platform Features — Included in Roofing */}
+                              {includedAddons.length > 0 && isRoofing && (
+                                <div className="rounded-lg border border-green-200 overflow-hidden">
+                                  <div className="px-4 py-2.5 bg-green-50 flex items-center gap-2">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                                    <span className="text-xs font-semibold text-green-700 uppercase tracking-wider">Included with Roofing Plan</span>
+                                  </div>
+                                  <div className="bg-green-50/30 px-4 py-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
+                                      {includedAddons.map((addon) => (
+                                        <div key={addon.id} className="flex items-start gap-2.5">
+                                          <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                          <div className="min-w-0">
+                                            <span className="text-sm font-medium text-gray-900">{addon.name}</span>
+                                            {addon.description && (
+                                              <p className="text-xs text-gray-500 mt-0.5">{addon.description}</p>
+                                            )}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Platform Features — Paid (Non-Roofing) */}
+                              {includedAddons.length > 0 && !isRoofing && (
+                                <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
+                                  <div className="px-4 py-2 bg-gray-50/70">
+                                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Platform Features</span>
+                                  </div>
+                                  <div className="divide-y divide-gray-50">
+                                    {includedAddons.map((addon) => {
+                                      const hasDiscount = addon.discountType && addon.discountType !== "none" && addon.discountValue > 0;
+                                      const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType || "none", addon.discountValue || 0);
+
+                                      return (
+                                        <div key={addon.id} className="flex items-center justify-between px-4 py-3">
+                                          <div className="min-w-0 flex-1">
+                                            <span className="text-sm font-medium text-gray-900">{addon.name}</span>
+                                            {addon.description && (
+                                              <p className="text-xs text-gray-500 mt-0.5">{addon.description}</p>
+                                            )}
+                                          </div>
+                                          <div className="flex-shrink-0 ml-4 text-right">
+                                            {hasDiscount ? (
+                                              <div className="flex flex-col items-end">
+                                                <span className="text-xs text-gray-400 line-through">{formatCurrency(addon.price)}/mo</span>
+                                                <span className="text-sm font-semibold text-green-600">{formatCurrency(discountedPrice)}/mo</span>
+                                              </div>
+                                            ) : (
+                                              <span className="text-sm font-semibold text-gray-900">{formatCurrency(addon.price)}/mo</span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          );
                         })()}
                       </div>
                     ) : (
