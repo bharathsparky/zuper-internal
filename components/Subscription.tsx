@@ -56,9 +56,9 @@ const mockSubscription = {
     },
   ],
   addons: [
-    { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, quantity: 5, group: "Seats", unit: "seat", description: "Login, time tracking, geo tracking, basic job view", discountType: "none" as const, discountValue: 0 },
-    { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, quantity: 1, group: "Zuper Connect", description: "SMS/MMS telephony with call flows, recording, notes, CRM sync. 1 number, 25 users, 2,500 mins, 2,000 SMS, 500 MMS; 1-yr recording", discountType: "none" as const, discountValue: 0 },
-    { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, quantity: 1, group: "Zuper Fleet", unit: "vehicle", description: "GPS tracking, AI safety cams, health monitoring", discountType: "none" as const, discountValue: 0 },
+    { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, quantity: 5, group: "Seats", unit: "seat", description: "Login, time tracking, geo tracking, basic job view", discountType: "percentage" as "none" | "fixed" | "percentage", discountValue: 10 },
+    { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, quantity: 1, group: "Zuper Connect", description: "SMS/MMS telephony with call flows, recording, notes, CRM sync. 1 number, 25 users, 2,500 mins, 2,000 SMS, 500 MMS; 1-yr recording", discountType: "fixed" as "none" | "fixed" | "percentage", discountValue: 15 },
+    { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, quantity: 1, group: "Zuper Fleet", unit: "vehicle", description: "GPS tracking, AI safety cams, health monitoring", discountType: "none" as "none" | "fixed" | "percentage", discountValue: 0 },
   ],
   oneTimeCharges: [
     { id: "implementation", name: "Implementation Fee", amount: 2500, status: "paid" as const, paidDate: "2024-10-15", discountType: "none" as const, discountValue: 0 },
@@ -452,114 +452,73 @@ export default function Subscription() {
                     {subscription.addons.length > 0 ? (
                       <div className="space-y-3">
                         {(() => {
-                          const seatAddons = subscription.addons.filter(a => a.group === "Seats");
-                          const paidAddons = subscription.addons.filter(a => a.group !== "Seats" && a.group !== "Platform Features");
-                          const paidGroups = [...new Set(paidAddons.map(a => a.group))];
+                          const addonGroups = [...new Set(subscription.addons.map(a => a.group))];
 
-                          return (
-                            <>
-                              {/* Seat-based Add-ons — Featured Card with Grid */}
-                              {seatAddons.map(addon => {
-                                const hasDiscount = addon.discountType && addon.discountType !== "none" && addon.discountValue > 0;
-                                const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType || "none", addon.discountValue || 0);
-                                const qty = addon.quantity || 1;
-                                const lineTotal = discountedPrice * qty;
-                                const originalLineTotal = addon.price * qty;
+                          return addonGroups.map((group) => (
+                            <div key={group}>
+                              <div className="mb-1.5">
+                                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">{group}</span>
+                              </div>
+                              <div className="space-y-2">
+                                {subscription.addons.filter(a => a.group === group).map((addon) => {
+                                  const hasDiscount = addon.discountType && addon.discountType !== "none" && addon.discountValue > 0;
+                                  const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType || "none", addon.discountValue || 0);
+                                  const qty = addon.quantity || 1;
+                                  const isSeat = addon.group === "Seats";
+                                  const lineTotal = discountedPrice * (isSeat ? qty : 1);
+                                  const originalLineTotal = addon.price * (isSeat ? qty : 1);
+                                  const unitLabel = addon.unit ? `/${addon.unit}` : "";
 
-                                return (
-                                  <div key={addon.id} className="bg-white rounded-lg border border-gray-200 p-4">
-                                    <div className="flex items-start justify-between mb-3">
-                                      <div>
+                                  return (
+                                    <div key={addon.id} className="bg-white rounded-lg border border-gray-200 p-4">
+                                      <div className="mb-3">
                                         <h4 className="text-sm font-semibold text-gray-900">{addon.name}</h4>
                                         {addon.description && (
-                                          <p className="text-xs text-gray-500 mt-0.5">{addon.description}</p>
+                                          <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{addon.description}</p>
                                         )}
                                       </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                      <div>
-                                        <p className="text-xs font-medium text-gray-500 mb-1">Quantity</p>
-                                        <p className="text-sm font-semibold text-gray-900">{qty}</p>
-                                      </div>
-                                      <div>
-                                        <p className="text-xs font-medium text-gray-500 mb-1">Price/Seat</p>
-                                        <p className="text-sm font-semibold text-gray-900">{formatCurrency(addon.price)}</p>
-                                      </div>
-                                      <div>
-                                        <p className="text-xs font-medium text-gray-500 mb-1">Discount</p>
-                                        {hasDiscount ? (
-                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full">
-                                            <Tag className="w-3 h-3" />
-                                            {(addon.discountType as string) === "fixed" ? `$${addon.discountValue} off` : `${addon.discountValue}% off`}
-                                          </span>
-                                        ) : (
-                                          <span className="text-xs text-gray-400">—</span>
-                                        )}
-                                      </div>
-                                      <div>
-                                        <p className="text-xs font-medium text-gray-500 mb-1">Total</p>
-                                        {hasDiscount ? (
-                                          <div className="flex items-center gap-2">
-                                            <span className="text-xs text-gray-400 line-through">{formatCurrency(originalLineTotal)}</span>
-                                            <span className="text-sm font-semibold text-green-600">{formatCurrency(lineTotal)}/mo</span>
+                                      <div className={`grid ${isSeat ? "grid-cols-4" : "grid-cols-3"} gap-4`}>
+                                        {isSeat && (
+                                          <div>
+                                            <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1">Quantity</p>
+                                            <p className="text-sm font-semibold text-gray-900">{qty}</p>
                                           </div>
-                                        ) : (
-                                          <p className="text-sm font-semibold text-gray-900">{formatCurrency(lineTotal)}/mo</p>
                                         )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-
-                              {/* Paid Service Add-ons — Clean Grouped Table */}
-                              {paidAddons.length > 0 && (
-                                <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
-                                  {paidGroups.map((group) => (
-                                    <div key={group}>
-                                      <div className="px-4 py-2 bg-gray-50/70">
-                                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{group}</span>
-                                      </div>
-                                      <div className="divide-y divide-gray-50">
-                                        {paidAddons.filter(a => a.group === group).map((addon) => {
-                                          const hasDiscount = addon.discountType && addon.discountType !== "none" && addon.discountValue > 0;
-                                          const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType || "none", addon.discountValue || 0);
-
-                                          return (
-                                            <div key={addon.id} className="flex items-center justify-between px-4 py-3">
-                                              <div className="min-w-0 flex-1">
-                                                <span className="text-sm font-medium text-gray-900">{addon.name}</span>
-                                                {addon.description && (
-                                                  <p className="text-xs text-gray-500 mt-0.5">{addon.description}</p>
-                                                )}
-                                                {hasDiscount && (
-                                                  <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full">
-                                                    <Tag className="w-3 h-3" />
-                                                    {(addon.discountType as "fixed" | "percentage") === "fixed" ? `$${addon.discountValue} off` : `${addon.discountValue}% off`}
-                                                  </span>
-                                                )}
-                                              </div>
-                                              <div className="flex-shrink-0 ml-4 text-right">
-                                                {hasDiscount ? (
-                                                  <div className="flex flex-col items-end">
-                                                    <span className="text-xs text-gray-400 line-through">{formatCurrency(addon.price)}{addon.unit ? `/${addon.unit}` : ""}/mo</span>
-                                                    <span className="text-sm font-semibold text-green-600">{formatCurrency(discountedPrice)}{addon.unit ? `/${addon.unit}` : ""}/mo</span>
-                                                  </div>
-                                                ) : (
-                                                  <span className="text-sm font-semibold text-gray-900">{formatCurrency(addon.price)}{addon.unit ? `/${addon.unit}` : ""}/mo</span>
-                                                )}
-                                              </div>
+                                        <div>
+                                          <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1">
+                                            {isSeat ? "Price/Seat" : `Price${unitLabel}`}
+                                          </p>
+                                          <p className="text-sm font-semibold text-gray-900">{formatCurrency(addon.price)}/mo</p>
+                                        </div>
+                                        <div>
+                                          <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1">Discount</p>
+                                          {hasDiscount ? (
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full">
+                                              <Tag className="w-3 h-3" />
+                                              {(addon.discountType as string) === "fixed" ? `$${addon.discountValue} off` : `${addon.discountValue}% off`}
+                                            </span>
+                                          ) : (
+                                            <span className="text-xs text-gray-400">—</span>
+                                          )}
+                                        </div>
+                                        <div>
+                                          <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1">Total</p>
+                                          {hasDiscount ? (
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-xs text-gray-400 line-through">{formatCurrency(originalLineTotal)}</span>
+                                              <span className="text-sm font-semibold text-green-600">{formatCurrency(lineTotal)}/mo</span>
                                             </div>
-                                          );
-                                        })}
+                                          ) : (
+                                            <p className="text-sm font-semibold text-gray-900">{formatCurrency(lineTotal)}/mo</p>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
-                                  ))}
-                                </div>
-                              )}
-
-                            </>
-                          );
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ));
                         })()}
                       </div>
                     ) : (
