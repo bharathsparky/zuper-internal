@@ -6,10 +6,6 @@ import {
   Edit3,
   RefreshCw,
   Plus,
-  Wallet,
-  BarChart3,
-  Headphones,
-  Code,
   UserX,
   CheckCircle2,
   Clock,
@@ -20,7 +16,6 @@ import {
   Puzzle,
   DollarSign,
   Tag,
-  type LucideIcon,
 } from "lucide-react";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -108,14 +103,6 @@ const syncErrorMessages: Record<string, { title: string; description: string; le
   },
 };
 
-// Add-on icon mapping
-const addonIcons: Record<string, { icon: LucideIcon; bgColor: string; iconColor: string }> = {
-  zuper_pay: { icon: Wallet, bgColor: "bg-emerald-50", iconColor: "text-emerald-600" },
-  analytics: { icon: BarChart3, bgColor: "bg-purple-50", iconColor: "text-purple-600" },
-  support: { icon: Headphones, bgColor: "bg-orange-50", iconColor: "text-orange-600" },
-  api: { icon: Code, bgColor: "bg-cyan-50", iconColor: "text-cyan-600" },
-  basic_user: { icon: Users, bgColor: "bg-blue-50", iconColor: "text-blue-600" },
-};
 
 
 export default function Subscription() {
@@ -483,12 +470,6 @@ export default function Subscription() {
                     {subscription.addons.length > 0 ? (
                       <div className="space-y-2">
                         {subscription.addons.map((addon) => {
-                          const iconConfig = addonIcons[addon.id] || {
-                            icon: CreditCard,
-                            bgColor: "bg-blue-50",
-                            iconColor: "text-blue-600",
-                          };
-                          const IconComponent = iconConfig.icon;
                           const hasDiscount = addon.discountType && addon.discountType !== "none" && addon.discountValue > 0;
                           const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType || "none", addon.discountValue || 0);
 
@@ -498,9 +479,6 @@ export default function Subscription() {
                               className="flex items-center justify-between py-3 px-4 bg-white rounded-lg border border-gray-200"
                             >
                               <div className="flex items-center gap-3">
-                                <div className={`w-8 h-8 ${iconConfig.bgColor} rounded-lg flex items-center justify-center`}>
-                                  <IconComponent className={`w-4 h-4 ${iconConfig.iconColor}`} />
-                                </div>
                                 <div>
                                   <span className="text-sm font-medium text-gray-900">{addon.name}</span>
                                   {hasDiscount && (
