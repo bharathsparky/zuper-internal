@@ -47,15 +47,6 @@ const mockSubscription = {
       discountType: "percentage" as const,
       discountValue: 10,
     },
-    {
-      id: "2",
-      type: "basic",
-      purchased: 25,
-      active: 23,
-      pricePerLicense: 20,
-      discountType: "none" as const,
-      discountValue: 0,
-    },
   ],
   nonBillableLicenses: [
     {
@@ -74,6 +65,7 @@ const mockSubscription = {
   addons: [
     { id: "zuper_pay", name: "Zuper Pay", price: 100, discountType: "fixed" as const, discountValue: 20 },
     { id: "analytics", name: "Advanced Analytics", price: 50, discountType: "none" as const, discountValue: 0 },
+    { id: "basic_user", name: "Roofing Basic User", price: 20, discountType: "none" as const, discountValue: 0 },
   ],
   oneTimeCharges: [
     { id: "implementation", name: "Implementation Fee", amount: 2500, status: "paid" as const, paidDate: "2024-10-15", discountType: "none" as const, discountValue: 0 },
@@ -91,7 +83,6 @@ const mockSubscription = {
 const licenseTypeLabels: Record<string, string> = {
   premium_zp: "Roofing Premium (w/ Zuper Pay)",
   premium_no_zp: "Roofing Premium (w/o Zuper Pay)",
-  basic: "Roofing Basic User",
 };
 
 // Sync error messages - Context: Sync between Chargebee and Internal Admin
@@ -123,6 +114,7 @@ const addonIcons: Record<string, { icon: LucideIcon; bgColor: string; iconColor:
   analytics: { icon: BarChart3, bgColor: "bg-purple-50", iconColor: "text-purple-600" },
   support: { icon: Headphones, bgColor: "bg-orange-50", iconColor: "text-orange-600" },
   api: { icon: Code, bgColor: "bg-cyan-50", iconColor: "text-cyan-600" },
+  basic_user: { icon: Users, bgColor: "bg-blue-50", iconColor: "text-blue-600" },
 };
 
 
@@ -131,7 +123,7 @@ export default function Subscription() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isLicensesExpanded, setIsLicensesExpanded] = useState(true);
+  const [isPlanExpanded, setIsPlanExpanded] = useState(true);
   const [isAddonsExpanded, setIsAddonsExpanded] = useState(true);
   const [isOneTimeChargesExpanded, setIsOneTimeChargesExpanded] = useState(true);
   
@@ -356,10 +348,10 @@ export default function Subscription() {
                 </div>
               </div>
 
-              {/* Collapsible Licenses Section */}
+              {/* Collapsible Plan Section */}
               <div className="bg-gray-50 rounded-xl overflow-hidden">
                 <button
-                  onClick={() => setIsLicensesExpanded(!isLicensesExpanded)}
+                  onClick={() => setIsPlanExpanded(!isPlanExpanded)}
                   className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-100 transition-colors"
                 >
                   <div className="flex items-center gap-3">
@@ -367,7 +359,7 @@ export default function Subscription() {
                       <Users className="w-4 h-4 text-blue-600" />
                     </div>
                     <div className="text-left">
-                      <h3 className="text-sm font-semibold text-gray-900">Licenses</h3>
+                      <h3 className="text-sm font-semibold text-gray-900">Plan</h3>
                       <p className="text-xs text-gray-500">
                         {totalLicenses} billable{totalNonBillable > 0 ? ` · ${totalNonBillable} non-billable` : ''}
                       </p>
@@ -375,14 +367,14 @@ export default function Subscription() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-semibold text-gray-900">{formatCurrency(licensesTotal)}/mo</span>
-                    {isLicensesExpanded ? (
+                    {isPlanExpanded ? (
                       <ChevronDown className="w-5 h-5 text-gray-400" />
                     ) : (
                       <ChevronRight className="w-5 h-5 text-gray-400" />
                     )}
                   </div>
                 </button>
-                {isLicensesExpanded && (
+                {isPlanExpanded && (
                   <div className="px-5 pb-5 space-y-4">
                     {/* Billable Licenses */}
                     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -663,7 +655,7 @@ export default function Subscription() {
                     <p className="text-2xl font-bold text-gray-900">{formatCurrency(grandTotal)}<span className="text-sm font-normal text-gray-500">/month</span></p>
                   </div>
                   <div className="text-right text-sm text-gray-500">
-                    <p>Licenses: {formatCurrency(licensesTotal)}</p>
+                    <p>Plan: {formatCurrency(licensesTotal)}</p>
                     <p>Add-ons: {formatCurrency(addonsTotal)}</p>
                   </div>
                 </div>

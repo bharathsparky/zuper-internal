@@ -20,7 +20,6 @@ interface CreateSubscriptionModalProps {
 const licenseTypes = [
   { value: "premium_zp", label: "Roofing Premium (w/ Zuper Pay)", defaultPrice: 50 },
   { value: "premium_no_zp", label: "Roofing Premium (w/o Zuper Pay)", defaultPrice: 50 },
-  { value: "basic", label: "Roofing Basic User", defaultPrice: 20 },
 ];
 
 const addons = [
@@ -28,6 +27,7 @@ const addons = [
   { id: "analytics", name: "Advanced Analytics", price: 50 },
   { id: "support", name: "Premium Support", price: 200 },
   { id: "api", name: "API Access", price: 150 },
+  { id: "basic_user", name: "Roofing Basic User", price: 20 },
 ];
 
 export default function CreateSubscriptionModal({
@@ -38,7 +38,6 @@ export default function CreateSubscriptionModal({
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annually">("monthly");
   const [licenses, setLicenses] = useState<License[]>([
     { id: "1", type: "premium_zp", quantity: 10, pricePerLicense: 50 },
-    { id: "2", type: "basic", quantity: 25, pricePerLicense: 20 },
   ]);
   const [selectedAddons, setSelectedAddons] = useState<string[]>(["zuper_pay"]);
   const [trialPeriod, setTrialPeriod] = useState<string>("none");
@@ -197,11 +196,11 @@ export default function CreateSubscriptionModal({
             </div>
           </section>
 
-          {/* License Configuration */}
+          {/* Plan Configuration */}
           <section>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
-                License Configuration
+                Plan Configuration
               </h3>
               <button
                 onClick={addLicense}
@@ -209,7 +208,7 @@ export default function CreateSubscriptionModal({
                 className="flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 disabled:text-gray-400 disabled:cursor-not-allowed"
               >
                 <Plus className="w-4 h-4" />
-                Add License Type
+                Add Plan Type
               </button>
             </div>
 
@@ -372,7 +371,7 @@ export default function CreateSubscriptionModal({
             </h3>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-slate-300">Licenses Total</span>
+                <span className="text-sm text-slate-300">Plan Total</span>
                 <span className="text-sm text-white">
                   {formatCurrency(licensesTotal)}/month
                 </span>

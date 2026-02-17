@@ -58,7 +58,6 @@ interface EditSubscriptionModalProps {
 const licenseTypes = [
   { value: "premium_zp", label: "Roofing Premium (w/ Zuper Pay)", defaultPrice: 50 },
   { value: "premium_no_zp", label: "Roofing Premium (w/o Zuper Pay)", defaultPrice: 50 },
-  { value: "basic", label: "Roofing Basic User", defaultPrice: 20 },
 ];
 
 const availableAddons = [
@@ -72,6 +71,7 @@ const availableAddons = [
   { id: "webhooks", name: "Webhooks", price: 50, description: "Real-time event notifications" },
   { id: "scheduling", name: "Advanced Scheduling", price: 80, description: "Smart route optimization" },
   { id: "inventory", name: "Inventory Management", price: 120, description: "Track parts & materials" },
+  { id: "basic_user", name: "Roofing Basic User", price: 20, description: "Basic roofing user access" },
 ];
 
 const getLicenseLabel = (type: string) => {
@@ -562,17 +562,17 @@ export default function EditSubscriptionModal({
               </div>
             </section>
 
-            {/* Licenses Section */}
+            {/* Plan Section */}
             <section>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Licenses</h3>
+                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Plan</h3>
                 <button
                   onClick={addLicense}
                   disabled={licenses.length >= licenseTypes.length}
                   className="text-sm font-medium text-blue-600 hover:text-blue-700 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center gap-1.5"
                 >
                   <Plus className="w-4 h-4" />
-                  Add License Type
+                  Add Plan Type
                 </button>
               </div>
 
@@ -1014,7 +1014,7 @@ export default function EditSubscriptionModal({
 
               <div className="p-5 space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Licenses ({licenses.reduce((sum, l) => sum + l.quantity, 0)} total)</span>
+                  <span className="text-sm text-gray-600">Plan ({licenses.reduce((sum, l) => sum + l.quantity, 0)} total)</span>
                   <span className="text-sm font-medium text-gray-900">{formatCurrency(licensesTotal)}/mo</span>
                 </div>
                 <div className="flex justify-between items-center">
