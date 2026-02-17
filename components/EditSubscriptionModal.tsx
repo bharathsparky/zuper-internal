@@ -735,67 +735,86 @@ export default function EditSubscriptionModal({
                               </div>
                             </div>
 
-                            {/* Expanded controls for selected addons */}
+                            {/* Expanded controls — grid layout matching Plan section */}
                             {isSelected && (
-                              <div className="px-4 pb-2.5 flex items-center gap-3 ml-7" onClick={(e) => e.stopPropagation()}>
-                                {/* Qty (seats only) */}
-                                {addon.group === "Seats" && (
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-[10px] font-medium text-gray-400 uppercase">Qty</span>
-                                    <div className="inline-flex items-center h-7 bg-white border border-gray-200 rounded-md overflow-hidden">
-                                      <button onClick={() => updateAddonQuantity(addon.id, qty - 1)} className="w-6 h-full flex items-center justify-center hover:bg-gray-50">
-                                        <Minus className="w-2.5 h-2.5 text-gray-500" />
-                                      </button>
-                                      <input
-                                        type="number"
-                                        value={qty}
-                                        onChange={(e) => updateAddonQuantity(addon.id, parseInt(e.target.value) || 1)}
-                                        className="w-8 h-full text-center text-xs font-medium border-x border-gray-200 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                      />
-                                      <button onClick={() => updateAddonQuantity(addon.id, qty + 1)} className="w-6 h-full flex items-center justify-center hover:bg-gray-50">
-                                        <Plus className="w-2.5 h-2.5 text-gray-500" />
-                                      </button>
+                              <div className="mx-4 mb-3 ml-11 p-3 bg-gray-50 border border-gray-100 rounded-lg" onClick={(e) => e.stopPropagation()}>
+                                <div className={`grid ${addon.group === "Seats" ? "grid-cols-4" : "grid-cols-3"} gap-3`}>
+                                  {/* Qty — seats only */}
+                                  {addon.group === "Seats" && (
+                                    <div>
+                                      <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1.5">Qty</label>
+                                      <div className="inline-flex items-center h-8 bg-white border border-gray-200 rounded-lg overflow-hidden">
+                                        <button onClick={() => updateAddonQuantity(addon.id, qty - 1)} className="w-7 h-full flex items-center justify-center hover:bg-gray-50 border-r border-gray-200">
+                                          <Minus className="w-3 h-3 text-gray-500" />
+                                        </button>
+                                        <input
+                                          type="number"
+                                          value={qty}
+                                          onChange={(e) => updateAddonQuantity(addon.id, parseInt(e.target.value) || 1)}
+                                          className="w-9 h-full text-center text-sm font-semibold text-gray-900 focus:outline-none bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                        />
+                                        <button onClick={() => updateAddonQuantity(addon.id, qty + 1)} className="w-7 h-full flex items-center justify-center hover:bg-gray-50 border-l border-gray-200">
+                                          <Plus className="w-3 h-3 text-gray-500" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Price */}
+                                  <div>
+                                    <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1.5">
+                                      {addon.group === "Seats" ? "Price/Seat" : `Price${unitLabel}`}
+                                    </label>
+                                    <div className="h-8 flex items-center px-2.5 bg-white border border-gray-200 rounded-lg">
+                                      <span className="text-sm font-medium text-gray-900">{formatCurrency(addon.price)}</span>
+                                      <span className="text-xs text-gray-400 ml-0.5">/mo</span>
                                     </div>
                                   </div>
-                                )}
-                                {/* Divider */}
-                                {addon.group === "Seats" && <div className="w-px h-5 bg-gray-200" />}
-                                {/* Discount */}
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-[10px] font-medium text-gray-400 uppercase flex items-center gap-0.5">
-                                    <Tag className="w-2.5 h-2.5" /> Discount
-                                  </span>
-                                  <select
-                                    value={discount.discountType}
-                                    onChange={(e) => updateAddonDiscount(addon.id, e.target.value as "none" | "fixed" | "percentage", discount.discountValue)}
-                                    className="h-7 px-1.5 bg-white border border-gray-200 rounded-md text-xs font-medium text-gray-600 focus:outline-none appearance-none cursor-pointer"
-                                  >
-                                    <option value="none">None</option>
-                                    <option value="fixed">$ Fixed</option>
-                                    <option value="percentage">% Off</option>
-                                  </select>
-                                  {discount.discountType !== "none" && (
-                                    <div className="relative">
-                                      {discount.discountType === "fixed" && (
-                                        <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">$</span>
-                                      )}
-                                      <input
-                                        type="number"
-                                        value={discount.discountValue}
-                                        onChange={(e) => updateAddonDiscount(addon.id, discount.discountType, parseFloat(e.target.value) || 0)}
-                                        placeholder="0"
-                                        className={`w-14 h-7 ${discount.discountType === "fixed" ? "pl-4" : "pl-2"} pr-4 bg-white border border-gray-200 rounded-md text-xs font-medium text-gray-900 focus:outline-none`}
-                                      />
-                                      {discount.discountType === "percentage" && (
-                                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">%</span>
+
+                                  {/* Discount */}
+                                  <div>
+                                    <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1.5">Discount</label>
+                                    <div className="flex h-8 gap-1">
+                                      <select
+                                        value={discount.discountType}
+                                        onChange={(e) => updateAddonDiscount(addon.id, e.target.value as "none" | "fixed" | "percentage", discount.discountValue)}
+                                        className="w-14 h-full px-1 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-600 focus:outline-none appearance-none cursor-pointer"
+                                      >
+                                        <option value="none">—</option>
+                                        <option value="fixed">$</option>
+                                        <option value="percentage">%</option>
+                                      </select>
+                                      {discount.discountType !== "none" && (
+                                        <div className="relative flex-1">
+                                          <input
+                                            type="number"
+                                            value={discount.discountValue}
+                                            onChange={(e) => updateAddonDiscount(addon.id, discount.discountType, parseFloat(e.target.value) || 0)}
+                                            placeholder="0"
+                                            className="w-full h-full px-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-900 focus:outline-none"
+                                          />
+                                          {discount.discountType === "percentage" && (
+                                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                                          )}
+                                        </div>
                                       )}
                                     </div>
-                                  )}
-                                  {hasDiscount && (
-                                    <span className="text-[10px] text-green-600 font-medium">
-                                      −{formatCurrency((addon.price - discountedPrice) * (addon.group === "Seats" ? qty : 1))}/mo
-                                    </span>
-                                  )}
+                                  </div>
+
+                                  {/* Total */}
+                                  <div>
+                                    <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1.5">Total</label>
+                                    <div className="h-8 flex items-center justify-end px-2.5 bg-white border border-gray-100 rounded-lg">
+                                      {hasDiscount ? (
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-xs text-gray-400 line-through">{formatCurrency(addon.price * (addon.group === "Seats" ? qty : 1))}</span>
+                                          <span className="text-sm font-bold text-green-600">{formatCurrency(lineTotal)}</span>
+                                        </div>
+                                      ) : (
+                                        <span className="text-sm font-bold text-gray-900">{formatCurrency(lineTotal)}</span>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             )}
@@ -831,57 +850,65 @@ export default function EditSubscriptionModal({
 
                     return (
                       <div key={charge.id} className={`px-4 py-3 ${isChanged ? "bg-blue-50/50" : ""}`}>
-                        <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-gray-900">{charge.name}</span>
                             {isChanged && (
                               <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">CHANGED</span>
                             )}
                           </div>
-                          {hasDiscount ? (
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs text-gray-400 line-through">{formatCurrency(charge.amount)}</span>
-                              <span className="text-sm font-semibold text-green-600">{formatCurrency(discountedPrice)}</span>
-                            </div>
-                          ) : (
-                            <span className="text-sm font-semibold text-gray-900">{formatCurrency(charge.amount)}</span>
-                          )}
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] font-medium text-gray-400 uppercase flex items-center gap-0.5">
-                            <Tag className="w-2.5 h-2.5" /> Discount
-                          </span>
-                          <select
-                            value={discount.discountType}
-                            onChange={(e) => updateOneTimeChargeDiscount(charge.id, e.target.value as "none" | "fixed" | "percentage", discount.discountValue)}
-                            className="h-7 px-1.5 bg-white border border-gray-200 rounded-md text-xs font-medium text-gray-600 focus:outline-none appearance-none cursor-pointer"
-                          >
-                            <option value="none">None</option>
-                            <option value="fixed">$ Fixed</option>
-                            <option value="percentage">% Off</option>
-                          </select>
-                          {discount.discountType !== "none" && (
-                            <div className="relative">
-                              {discount.discountType === "fixed" && (
-                                <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">$</span>
-                              )}
-                              <input
-                                type="number"
-                                value={discount.discountValue}
-                                onChange={(e) => updateOneTimeChargeDiscount(charge.id, discount.discountType, parseFloat(e.target.value) || 0)}
-                                placeholder="0"
-                                className={`w-16 h-7 ${discount.discountType === "fixed" ? "pl-4" : "pl-2"} pr-4 bg-white border border-gray-200 rounded-md text-xs font-medium text-gray-900 focus:outline-none`}
-                              />
-                              {discount.discountType === "percentage" && (
-                                <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">%</span>
+                        <div className="grid grid-cols-3 gap-3">
+                          {/* Amount */}
+                          <div>
+                            <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1.5">Amount</label>
+                            <div className="h-8 flex items-center px-2.5 bg-white border border-gray-200 rounded-lg">
+                              <span className="text-sm font-medium text-gray-900">{formatCurrency(charge.amount)}</span>
+                            </div>
+                          </div>
+                          {/* Discount */}
+                          <div>
+                            <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1.5">Discount</label>
+                            <div className="flex h-8 gap-1">
+                              <select
+                                value={discount.discountType}
+                                onChange={(e) => updateOneTimeChargeDiscount(charge.id, e.target.value as "none" | "fixed" | "percentage", discount.discountValue)}
+                                className="w-14 h-full px-1 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-600 focus:outline-none appearance-none cursor-pointer"
+                              >
+                                <option value="none">—</option>
+                                <option value="fixed">$</option>
+                                <option value="percentage">%</option>
+                              </select>
+                              {discount.discountType !== "none" && (
+                                <div className="relative flex-1">
+                                  <input
+                                    type="number"
+                                    value={discount.discountValue}
+                                    onChange={(e) => updateOneTimeChargeDiscount(charge.id, discount.discountType, parseFloat(e.target.value) || 0)}
+                                    placeholder="0"
+                                    className="w-full h-full px-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-900 focus:outline-none"
+                                  />
+                                  {discount.discountType === "percentage" && (
+                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                                  )}
+                                </div>
                               )}
                             </div>
-                          )}
-                          {hasDiscount && (
-                            <span className="text-[10px] text-green-600 font-medium">
-                              −{formatCurrency(charge.amount - discountedPrice)}
-                            </span>
-                          )}
+                          </div>
+                          {/* Total */}
+                          <div>
+                            <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1.5">Total</label>
+                            <div className="h-8 flex items-center justify-end px-2.5 bg-white border border-gray-100 rounded-lg">
+                              {hasDiscount ? (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs text-gray-400 line-through">{formatCurrency(charge.amount)}</span>
+                                  <span className="text-sm font-bold text-green-600">{formatCurrency(discountedPrice)}</span>
+                                </div>
+                              ) : (
+                                <span className="text-sm font-bold text-gray-900">{formatCurrency(charge.amount)}</span>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     );
