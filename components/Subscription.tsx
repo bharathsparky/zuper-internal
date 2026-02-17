@@ -39,7 +39,7 @@ const mockSubscription = {
       purchased: 10,
       active: 8,
       pricePerLicense: 50,
-      discountType: "percentage" as const,
+      discountType: "percentage" as "none" | "fixed" | "percentage",
       discountValue: 10,
     },
   ],

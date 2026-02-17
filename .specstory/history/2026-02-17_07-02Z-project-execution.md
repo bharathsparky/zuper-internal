@@ -2893,3 +2893,362 @@ Done! Changes committed and pushed to `origin/main`. ✅
 
 ---
 
+_**User (2026-02-17 07:19Z)**_
+
+DOM Path: div.min-h-.creen bg-gray-100 flex flex-col > main.flex-1 relative -mt-6 > div.mx-auto max-w-[1400px] w-full px-6 lg:px-12 pb-8 > div.flex gap-5 item.-.tart > div.flex-1 min-w-0 > div.pace-y-6 > div.bg-white rounded-xl border border-gray-200 .hadow-.m > div.p-6 > div.pace-y-6 > div.bg-gray-50 rounded-xl overflow-hidden[1] > div.px-5 pb-5 > div.pace-y-2 > div.flex item.-center ju.tify-between py-3 px-4 bg-white rounded-lg border border-gray-200[0] > div.flex item.-center gap-3 > div.w-8 h-8 bg-emerald-50 rounded-lg flex item.-center ju.tify-center
+Position: top=575px, left=386px, width=32px, height=32px
+React Component: Subscription
+HTML Element: <div class="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center" data-cursor-element-id="cursor-el-354"></div> remove the icons for addons we are not storing or assicaiting any icons
+
+---
+
+_**Agent (model claude-4.6-opus-high-thinking, mode Agent)**_
+
+
+
+
+
+---
+
+<think><details><summary>Thought Process</summary>
+The user wants to remove the icons from the add-ons section in the Subscription component. Let me find the relevant code and remove the icon rendering.</details></think>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: undefined, lines removed: 6
+
+```diff
+@@ -484,10 +484,4 @@
+                        &lt;div className="space-y-2"&gt;
+                          {subscription.addons.map((addon) =&gt; {
+-                           const iconConfig = addonIcons[addon.id] || {
+-                             icon: CreditCard,
+-                             bgColor: "bg-blue-50",
+-                             iconColor: "text-blue-600",
+-                           };
+-                           const IconComponent = iconConfig.icon;
+                            const hasDiscount = addon.discountType &amp;&amp; addon.discountType !== "none" &amp;&amp; addon.discountValue &gt; 0;
+                            const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType || "none", addon.discountValue || 0);
+```
+
+**Chunk 2**
+Lines added: undefined, lines removed: 3
+
+```diff
+@@ -499,7 +493,4 @@
+                              &gt;
+                                &lt;div className="flex items-center gap-3"&gt;
+-                                 &lt;div className={&#96;w-8 h-8 ${iconConfig.bgColor} rounded-lg flex items-center justify-center&#96;}&gt;
+-                                   &lt;IconComponent className={&#96;w-4 h-4 ${iconConfig.iconColor}&#96;} /&gt;
+-                                 &lt;/div&gt;
+                                  &lt;div&gt;
+                                    &lt;span className="text-sm font-medium text-gray-900"&gt;{addon.name}&lt;/span&gt;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now let me also remove the unused `addonIcons` constant and the unused icon imports:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: undefined, lines removed: 8
+
+```diff
+@@ -109,12 +109,4 @@
+  };
+  
+- // Add-on icon mapping
+- const addonIcons: Record&lt;string, { icon: LucideIcon; bgColor: string; iconColor: string }&gt; = {
+-   zuper_pay: { icon: Wallet, bgColor: "bg-emerald-50", iconColor: "text-emerald-600" },
+-   analytics: { icon: BarChart3, bgColor: "bg-purple-50", iconColor: "text-purple-600" },
+-   support: { icon: Headphones, bgColor: "bg-orange-50", iconColor: "text-orange-600" },
+-   api: { icon: Code, bgColor: "bg-cyan-50", iconColor: "text-cyan-600" },
+-   basic_user: { icon: Users, bgColor: "bg-blue-50", iconColor: "text-blue-600" },
+- };
+  
+  
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now remove the unused imports (`Wallet`, `BarChart3`, `Headphones`, `Code`, `type LucideIcon`, `CreditCard`):
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+Let me check which of these icons are still used elsewhere in the file:
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="grep">
+<details>
+<summary>Tool use: **grep** • Grep for "\b(CreditCard|Wallet|BarChart3|Headphones|Code|LucideIcon)\b" in "/Users/bharath.s/zuper-internal-admin/components/Subscription.tsx" • 7 matches</summary>
+
+Output mode: content
+
+
+| File | Content | Line |
+|------|------|------|
+| `components/Subscription.tsx` | `CreditCard,` | L5 |
+| `components/Subscription.tsx` | `Wallet,` | L9 |
+| `components/Subscription.tsx` | `BarChart3,` | L10 |
+| `components/Subscription.tsx` | `Headphones,` | L11 |
+| `components/Subscription.tsx` | `Code,` | L12 |
+| `components/Subscription.tsx` | `type LucideIcon,` | L23 |
+| `components/Subscription.tsx` | `<CreditCard className="w-10 h-10 text-blue-500" />` | L219 |
+
+
+</details>
+</tool-use>
+
+---
+
+`CreditCard` is still used on line 219 (empty state). The rest (`Wallet`, `BarChart3`, `Headphones`, `Code`, `LucideIcon`) are no longer used.
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: undefined, lines removed: 4
+
+```diff
+@@ -7,8 +7,4 @@
+    RefreshCw,
+    Plus,
+-   Wallet,
+-   BarChart3,
+-   Headphones,
+-   Code,
+    UserX,
+    CheckCircle2,
+```
+
+**Chunk 2**
+Lines added: undefined, lines removed: 1
+
+```diff
+@@ -21,5 +17,4 @@
+    DollarSign,
+    Tag,
+-   type LucideIcon,
+  } from "lucide-react";
+  import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 1 file</summary>
+      
+Lint paths:
+
+- `/Users/bharath.s/zuper-internal-admin/components/Subscription.tsx`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+No errors. The addon icons have been removed from the add-ons list, along with the unused `addonIcons` mapping and unused imports. The add-on names and prices still display — just without icons.
+
+---
+
+_**User (2026-02-17 07:19Z)**_
+
+push the changes
+
+---
+
+_**Agent (model claude-4.6-opus-high-thinking, mode Agent)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd /Users/bharath.s/zuper-internal-admin && git add -A && git commit -m "Remove addon icons from Subscription view" && git push</summary>
+
+```bash
+cd /Users/bharath.s/zuper-internal-admin && git add -A && git commit -m "Remove addon icons from Subscription view" && git push
+```
+
+```
+[main bfd760d] Remove addon icons from Subscription view
+ 2 files changed, 31 insertions(+), 22 deletions(-)
+To github.com:bharathsparky/zuper-internal.git
+   f8369a2..bfd760d  main -&gt; main
+
+```
+</details>
+</tool-use>
+
+---
+
+Done! Changes pushed to `origin/main`. ✅
+
+---
+
+_**User (2026-02-17 07:19Z)**_
+
+13:12:46.561 Running build in Washington, D.C., USA (East) – iad1
+13:12:46.561 Build machine configuration: 2 cores, 8 GB
+13:12:46.673 Cloning github.com/bharathsparky/zuper-internal (Branch: main, Commit: 25c5ea9)
+13:12:46.674 Previous build caches not available.
+13:12:49.239 Cloning completed: 2.566s
+13:12:49.677 Running "vercel build"
+13:12:50.107 Vercel CLI 50.1.6
+13:12:50.451 Installing dependencies...
+13:13:07.282 
+13:13:07.284 added 379 packages in 17s
+13:13:07.284 
+13:13:07.284 148 packages are looking for funding
+13:13:07.285   run `npm fund` for details
+13:13:07.366 Detected Next.js version: 16.0.7
+13:13:07.371 Running "npm run build"
+13:13:07.475 
+13:13:07.476 > zuper-internal-admin@0.1.0 build
+13:13:07.476 > next build
+13:13:07.476 
+13:13:08.258 Attention: Next.js now collects completely anonymous telemetry regarding usage.
+13:13:08.259 This information is used to shape Next.js' roadmap and prioritize features.
+13:13:08.259 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+13:13:08.260 https://nextjs.org/telemetry
+13:13:08.260 
+13:13:08.271    ▲ Next.js 16.0.7 (Turbopack)
+13:13:08.271 
+13:13:08.306    Creating an optimized production build ...
+13:13:16.465  ✓ Compiled successfully in 7.7s
+13:13:16.466    Running TypeScript ...
+13:13:26.709    Collecting page data using 1 worker ...
+13:13:27.084    Generating static pages using 1 worker (0/9) ...
+13:13:27.593    Generating static pages using 1 worker (2/9) 
+13:13:27.594    Generating static pages using 1 worker (4/9) 
+13:13:27.595    Generating static pages using 1 worker (6/9) 
+13:13:27.614  ✓ Generating static pages using 1 worker (9/9) in 530.2ms
+13:13:27.627    Finalizing page optimization ...
+13:13:27.635 
+13:13:27.637 Route (app)
+13:13:27.637 ┌ ○ /
+13:13:27.638 ├ ○ /_not-found
+13:13:27.638 ├ ○ /questbook
+13:13:27.638 ├ ○ /settings/proposal-templates
+13:13:27.638 ├ ○ /settings/proposal-templates/addons/new
+13:13:27.638 ├ ○ /settings/proposal-templates/service-packages/edit
+13:13:27.638 └ ○ /settings/proposal-templates/service-packages/new
+13:13:27.638 
+13:13:27.638 
+13:13:27.638 ○  (Static)  prerendered as static content
+13:13:27.638 
+13:13:28.271 Traced Next.js server files in: 34.918ms
+13:13:28.411 Created all serverless functions in: 139.445ms
+13:13:28.437 Collected static files (public/, static/, .next/static): 6.498ms
+13:13:28.558 Build Completed in /vercel/output [38s]
+13:13:28.779 Deploying outputs...
+13:13:35.216 Deployment completed
+13:13:36.165 Creating build cache...
+13:13:52.703 Created build cache: 16.533s
+13:13:52.704 Uploading build cache [186.57 MB]
+13:13:56.260 Build cache uploaded: 3.560s
+
+Vercel error
+
+---
+
+_**Agent (model claude-4.6-opus-high-thinking, mode Agent)**_
+
+
+
+
+
+---
+
+<think><details><summary>Thought Process</summary>
+The user is showing a Vercel build log. Looking at it carefully, the build actually seems to have completed successfully - "Build Completed", "Deployment completed", "Build cache uploaded" all appear. But the user says "Vercel error". 
+
+Wait, looking more carefully - the commit being cloned is `25c5ea9`, but the latest push was `bfd760d`. The Vercel deployment is using an old commit! Let me check if this is actually an error or if the user is confused.
+
+Actually, the user said "Vercel error" at the end. The build log itself looks successful. But maybe the deployment failed after the build? Or maybe the issue is that it's deploying an old commit (25c5ea9) instead of the latest (bfd760d).
+
+
+I need to check the git history to understand which commit is actually the latest and why Vercel might be deploying an older one.</details></think>
+
+---
+
+Looking at the Vercel log, the build actually **completed successfully** — it says "Deployment completed" and the build cache was uploaded. However, I notice it's cloning commit `25c5ea9` which is an **old commit**, not the latest one (`bfd760d`).
+
+Let me verify the current state of your repo:
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd /Users/bharath.s/zuper-internal-admin && git log --oneline -5</summary>
+
+```bash
+cd /Users/bharath.s/zuper-internal-admin && git log --oneline -5
+```
+
+```
+bfd760d Remove addon icons from Subscription view
+f8369a2 Remove Plan Name field from Plan Information section
+9d26fcc Move Roofing Basic User to addons and rename Licenses heading to Plan
+25c5ea9 fix: TypeScript errors - add type assertions for discount types and remove unused ts-expect-error
+cb94e85 fix: TypeScript error in EditSubscriptionModal - fix addons array filter
+
+```
+</details>
+</tool-use>
+
+---
+
+Vercel is deploying the old commit `25c5ea9`, but your latest is `bfd760d`. The build log you shared doesn't actually show an error — it says **"Deployment completed"** successfully. 
+
+Could you check the Vercel dashboard for the specific error? The log you pasted shows a fully successful build. It's possible:
+
+1. **This is an older deployment** from before your recent pushes — your new commits (`9d26fcc`, `f8369a2`, `bfd760d`) should trigger a new deployment automatically.
+2. If Vercel isn't picking up the latest commits, you may need to **trigger a redeploy** from the Vercel dashboard.
+
+Could you share the actual error message from Vercel, or check if a newer deployment has been triggered with the latest commit?
+
+---
+
