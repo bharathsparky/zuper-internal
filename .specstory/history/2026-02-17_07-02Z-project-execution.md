@@ -3252,3 +3252,398 @@ Could you share the actual error message from Vercel, or check if a newer deploy
 
 ---
 
+_**User (2026-02-17 07:19Z)**_
+
+13:04:51.438 Running build in Washington, D.C., USA (East) – iad1
+13:04:51.439 Build machine configuration: 2 cores, 8 GB
+13:04:51.549 Cloning github.com/bharathsparky/zuper-internal (Branch: main, Commit: bfd760d)
+13:04:51.550 Previous build caches not available.
+13:04:54.159 Cloning completed: 2.610s
+13:04:54.683 Running "vercel build"
+13:04:55.267 Vercel CLI 50.15.1
+13:04:55.608 Installing dependencies...
+13:05:11.916 
+13:05:11.916 added 379 packages in 16s
+13:05:11.917 
+13:05:11.917 148 packages are looking for funding
+13:05:11.917   run `npm fund` for details
+13:05:11.994 Detected Next.js version: 16.0.7
+13:05:11.999 Running "npm run build"
+13:05:12.095 
+13:05:12.096 > zuper-internal-admin@0.1.0 build
+13:05:12.098 > next build
+13:05:12.098 
+13:05:12.366 [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+13:05:12.897 Attention: Next.js now collects completely anonymous telemetry regarding usage.
+13:05:12.897 This information is used to shape Next.js' roadmap and prioritize features.
+13:05:12.898 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+13:05:12.898 https://nextjs.org/telemetry
+13:05:12.898 
+13:05:12.909    ▲ Next.js 16.0.7 (Turbopack)
+13:05:12.909 
+13:05:12.938    Creating an optimized production build ...
+13:05:13.074 [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+13:05:20.138  ✓ Compiled successfully in 6.7s
+13:05:20.141    Running TypeScript ...
+13:05:30.452 Failed to compile.
+13:05:30.452 
+13:05:30.452 ./components/Subscription.tsx:376:73
+13:05:30.452 Type error: This comparison appears to be unintentional because the types '"percentage"' and '"none"' have no overlap.
+13:05:30.452 
+13:05:30.453 [0m [90m 374 |[39m                         [33m<[39m[33mtbody[39m className[33m=[39m[32m"divide-y divide-gray-50"[39m[33m>[39m
+13:05:30.453  [90m 375 |[39m                           {subscription[33m.[39mlicenses[33m.[39mmap((license) [33m=>[39m {
+13:05:30.453 [31m[1m>[22m[39m[90m 376 |[39m                             [36mconst[39m hasDiscount [33m=[39m license[33m.[39mdiscountType [33m&&[39m license[33m.[39mdiscountType [33m!==[39m [32m"none"[39m [33m&&[39m license[33m.[39mdiscountValue [33m>[39m [35m0[39m[33m;[39m
+13:05:30.453  [90m     |[39m                                                                         [31m[1m^[22m[39m
+13:05:30.453  [90m 377 |[39m                             [36mconst[39m originalTotal [33m=[39m license[33m.[39mpurchased [33m*[39m license[33m.[39mpricePerLicense[33m;[39m
+13:05:30.453  [90m 378 |[39m                             [36mconst[39m discountedPrice [33m=[39m calculateDiscountedPrice(license[33m.[39mpricePerLicense[33m,[39m license[33m.[39mdiscountType [33m||[39m [32m"none"[39m[33m,[39m license[33m.[39mdiscountValue [33m||[39m [35m0[39m)[33m;[39m
+13:05:30.453  [90m 379 |[39m                             [36mconst[39m discountedTotal [33m=[39m license[33m.[39mpurchased [33m*[39m discountedPrice[33m;[39m[0m
+13:05:30.496 Next.js build worker exited with code: 1 and signal: null
+13:05:30.531 Error: Command "npm run build" exited with 1
+
+---
+
+_**Agent (model claude-4.6-opus-high-thinking, mode Agent)**_
+
+
+
+---
+
+
+
+
+
+---
+
+<think><details><summary>Thought Process</summary>
+The build is failing due to a TypeScript error in `Subscription.tsx` at line 376. The issue is that `license.discountType` is typed as `"percentage"` (since after removing the "basic" license, only the premium_zp license remains which has `discountType: "percentage"`), so comparing it to `"none"` is flagged as a type error because TypeScript knows the types don't overlap.
+
+Let me look at the relevant code to fix this.</details></think>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="grep">
+<details>
+<summary>Tool use: **grep** • Grep for "discountType" in "/Users/bharath.s/zuper-internal-admin/components/Subscription.tsx" • 26 matches</summary>
+
+Output mode: content
+
+
+| File | Content | Line |
+|------|------|------|
+| `components/Subscription.tsx` | `discountType: "percentage" as const,` | L42 |
+| `components/Subscription.tsx` | `\{ id: "zuper_pay", name: "Zuper Pay", price: 100, discountType: "fixed" as const, discountValue: 20 \},` | L61 |
+| `components/Subscription.tsx` | `\{ id: "analytics", name: "Advanced Analytics", price: 50, discountType: "none" as const, discountValue: 0 \},` | L62 |
+| `components/Subscription.tsx` | `\{ id: "basic_user", name: "Roofing Basic User", price: 20, discountType: "none" as const, discountValue: 0 \},` | L63 |
+| `components/Subscription.tsx` | `\{ id: "implementation", name: "Implementation Fee", amount: 2500, status: "paid" as const, paidDate: "2024-10-15", discountType: "none" as const, discountValue: 0 \},` | L66 |
+| `components/Subscription.tsx` | `\{ id: "platform", name: "Platform Setup Fee", amount: 500, status: "paid" as const, paidDate: "2024-10-15", discountType: "none" as const, discountValue: 0 \},` | L67 |
+| `components/Subscription.tsx` | `\{ id: "training", name: "Training & Onboarding", amount: 1000, status: "pending" as const, paidDate: null, discountType: "percentage" as const, discountValue: 10 \},` | L68 |
+| `components/Subscription.tsx` | `const calculateDiscountedPrice = (price: number, discountType: string, discountValue: number) => \{` | L155 |
+| `components/Subscription.tsx` | `if (discountType === "none" \|\| discountValue === 0) return price;` | L156 |
+| `components/Subscription.tsx` | `if (discountType === "fixed") return Math.max(0, price - discountValue);` | L157 |
+| `components/Subscription.tsx` | `if (discountType === "percentage") return price * (1 - discountValue / 100);` | L158 |
+| `components/Subscription.tsx` | `const discountedPrice = calculateDiscountedPrice(lic.pricePerLicense, lic.discountType \|\| "none", lic.discountValue \|\| 0);` | L165 |
+| `components/Subscription.tsx` | `const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType \|\| "none", addon.discountValue \|\| 0);` | L171 |
+| `components/Subscription.tsx` | `const discountedAmount = calculateDiscountedPrice(charge.amount, charge.discountType \|\| "none", charge.discountValue \|\| 0);` | L175 |
+| `components/Subscription.tsx` | `discountType: (lic.discountType \|\| "none") as "none" \| "fixed" \| "percentage",` | L190 |
+| `components/Subscription.tsx` | `discountType: (a.discountType \|\| "none") as "none" \| "fixed" \| "percentage",` | L195 |
+| `components/Subscription.tsx` | `discountType: (charge.discountType \|\| "none") as "none" \| "fixed" \| "percentage",` | L202 |
+| `components/Subscription.tsx` | `const hasDiscount = license.discountType && license.discountType !== "none" && license.discountValue > 0;` | L376 |
+| `components/Subscription.tsx` | `const discountedPrice = calculateDiscountedPrice(license.pricePerLicense, license.discountType \|\| "none", license.discountValue \|\| 0);` | L378 |
+| `components/Subscription.tsx` | `\{(license.discountType as "fixed" \| "percentage") === "fixed" ? `$$\{license.discountValue\}` : `$\{license.discountValue\}%`\}` | L398 |
+| `components/Subscription.tsx` | `const hasDiscount = addon.discountType && addon.discountType !== "none" && addon.discountValue > 0;` | L473 |
+| `components/Subscription.tsx` | `const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType \|\| "none", addon.discountValue \|\| 0);` | L474 |
+| `components/Subscription.tsx` | `\{(addon.discountType as "fixed" \| "percentage") === "fixed" ? `$$\{addon.discountValue\} off` : `$\{addon.discountValue\}% off`\}` | L487 |
+| `components/Subscription.tsx` | `const hasDiscount = charge.discountType && charge.discountType !== "none" && charge.discountValue > 0;` | L557 |
+| `components/Subscription.tsx` | `const discountedAmount = calculateDiscountedPrice(charge.amount, charge.discountType \|\| "none", charge.discountValue \|\| 0);` | L558 |
+| `components/Subscription.tsx` | `\{(charge.discountType as "fixed" \| "percentage") === "fixed" ? `$$\{charge.discountValue\}` : `$\{charge.discountValue\}%`\}` | L582 |
+
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+The issue is that after removing the "basic" license type from the mock data, TypeScript narrows the type of `license.discountType` to just `"percentage"` (since that's the only remaining license's discount type). So comparing it to `"none"` is flagged as a type error.
+
+Let me look at the type definition for licenses to understand how to fix this properly.</details></think>
+
+---
+
+The build error is because after removing the "basic" license, TypeScript infers `discountType` as only `"percentage"` (from the remaining license), so comparing to `"none"` is flagged. I need to widen the type in the mock data definition.
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+The fix is simple — the `discountType` on the license is narrowed to just `"percentage"` since there's only one license. I need to widen it to the full union type:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -40,5 +40,5 @@
+        active: 8,
+        pricePerLicense: 50,
+-       discountType: "percentage" as const,
++       discountType: "percentage" as "none" | "fixed" | "percentage",
+        discountValue: 10,
+      },
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 1 file</summary>
+      
+Lint paths:
+
+- `/Users/bharath.s/zuper-internal-admin/components/Subscription.tsx`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+Now let me verify the build passes locally:
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd /Users/bharath.s/zuper-internal-admin && npx next build 2>&1 | tail -30</summary>
+
+```bash
+cd /Users/bharath.s/zuper-internal-admin && npx next build 2>&1 | tail -30
+```
+
+```
+ ✓ Compiled successfully in 2.7s
+   Running TypeScript ...
+   Collecting page data using 7 workers ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+   Generating static pages using 7 workers (0/9) ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+   Generating static pages using 7 workers (2/9) 
+   Generating static pages using 7 workers (4/9) 
+   Generating static pages using 7 workers (6/9) 
+ ✓ Generating static pages using 7 workers (9/9) in 283.0ms
+   Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /questbook
+├ ○ /settings/proposal-templates
+├ ○ /settings/proposal-templates/addons/new
+├ ○ /settings/proposal-templates/service-packages/edit
+└ ○ /settings/proposal-templates/service-packages/new
+
+
+○  (Static)  prerendered as static content
+
+
+```
+</details>
+</tool-use>
+
+---
+
+Build passes successfully. Let me push the fix:
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd /Users/bharath.s/zuper-internal-admin && git add -A && git commit -m "Fix TypeScript build error: widen discountType to full union type" && git push</summary>
+
+```bash
+cd /Users/bharath.s/zuper-internal-admin && git add -A && git commit -m "Fix TypeScript build error: widen discountType to full union type" && git push
+```
+
+```
+[main 11c65e1] Fix TypeScript build error: widen discountType to full union type
+ 2 files changed, 360 insertions(+), 1 deletion(-)
+To github.com:bharathsparky/zuper-internal.git
+   bfd760d..11c65e1  main -&gt; main
+
+```
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="task" data-tool-name="todo_write">
+<details><summary>Tool use: **todo_write** • Todo List</summary>
+
+- [x] Update Subscription.tsx - move basic to addons, rename Licenses→Plan
+- [x] Update CreateSubscriptionModal.tsx - move basic to addons, rename heading
+- [x] Update EditSubscriptionModal.tsx - move basic to addons, rename heading
+- [x] Verify changes in browser
+
+</details>
+</tool-use>
+
+---
+
+Fixed and pushed! ✅
+
+The build was failing because after removing the "basic" license from the mock data, only one license remained with `discountType: "percentage"`. TypeScript narrowed the type to just `"percentage"`, making the `!== "none"` comparison a type error.
+
+**Fix:** Widened the type annotation from `"percentage" as const` to `"percentage" as "none" | "fixed" | "percentage"` so TypeScript allows all valid discount type comparisons.
+
+The build now passes locally and the fix has been pushed to `origin/main` (commit `11c65e1`). Vercel should pick it up and deploy successfully.
+
+---
+
+_**User (2026-02-17 07:58Z)**_
+
+To clarify our plan structure:
+
+Roofing Plans
+
+Core
+Premium
+Non-Roofing Plans
+
+Starter
+Core
+Premium
+Core and Premium plan customers (across both Roofing and non-Roofing) receive a $5 discount when selecting Zuper Pay as their payment option. Admins are assigned to one of these plans.
+Basic Seat Type (Crew users only):
+• Login access
+• Time tracking
+• Geo tracking
+• Basic job details view
+Managed as add-ons in Chargebee.
+
+Charged Add-Ons (billed separately):
+Zuper Connect
+
+Text: SMS/MMS telephony with call flows, recording, notes, CRM sync. (1 number, 25 users, 2,500 mins, 2,000 SMS, 500 MMS; 1-yr recording) $99/month
+Plus: Advanced telephony with call masking, ring groups, voicemails. (3 numbers, 25 users, 5,000 mins, 3,000 SMS, 1,000 MMS; 1-yr recording) $299/month
+Intelligence: AI telephony with summaries, responder, 3-yr storage. (5 numbers, 25 users, 5,000 mins, 6,000 SMS, 2,000 MMS; 200 AI calls) $499/month
+Zuper Fleet
+
+End-to-End: GPS tracking, AI safety cams, health monitoring. $60/vehicle/month
+SafetyCam AI: Dashcam for driver monitoring, safety scoring. $35/vehicle/month
+GPS with Vehicle Health: Real-time GPS, predictive alerts. $30/vehicle/month
+Features Included in Roofing Plans (Core & Premium):
+
+Customer Portal: Branded self-service portal for jobs, invoices, and requests.
+Report Builder: Advanced reporting for custom dashboards and KPIs.
+Workflow Builder: Visual automation for processes (up to 5,000 executions/month).
+Platform Maintenance Fee: Annual fee covering infrastructure, maintenance, and compliance.
+(These are not included in non-Roofing plans and would be charged as add-ons.) (edited)
+
+---
+
+_**Agent (model claude-4.6-opus-high-thinking, mode Agent)**_
+
+
+
+
+
+---
+
+<think><details><summary>Thought Process</summary>
+The user is providing a detailed plan structure for their subscription management system. Let me understand what they want:
+
+1. **Roofing Plans**: Core, Premium
+2. **Non-Roofing Plans**: Starter, Core, Premium
+3. Core and Premium customers get a $5 discount when selecting Zuper Pay
+4. **Basic Seat Type** (Crew users only) - managed as add-ons in Chargebee
+5. **Charged Add-Ons**:
+   - Zuper Connect (Text, Plus, Intelligence tiers)
+   - Zuper Fleet (End-to-End, SafetyCam AI, GPS with Vehicle Health)
+
+
+6. Features like Customer Portal, Report Builder, Workflow Builder, and Platform Maintenance Fee are included in Roofing plans but sold as add-ons for non-Roofing plans.
+
+I need to update the subscription components to reflect this structure, starting by examining the current code to see what modifications are required for the plan types, license options in modals, and add-on configurations.
+
+The key changes involve restructuring plan types for Roofing versus non-Roofing, updating add-ons to include seat options and various Zuper service tiers, and accounting for the $5 discount on Core and Premium plans. Let me review the existing files to understand the current implementation.</details></think>
+
+---
+
+Let me first understand the current state of all three files thoroughly, then plan the updates.
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+Now I have a clear picture of the current codebase. Let me plan the comprehensive updates needed based on the user's clarification:
+
+**Plan Structure:**
+- **Roofing Plans**: Core, Premium
+- **Non-Roofing Plans**: Starter, Core, Premium
+- Core and Premium customers get a $5 discount when selecting Zuper Pay
+- Admins are assigned to one of these plans
+
+**Basic Seat Type** (Crew users only):
+- Login access, Time tracking, Geo tracking, Basic job details view
+- Managed as add-ons in Chargebee ✅ (already done)
+
+
+- Zuper Connect and Zuper Fleet are charged add-ons with multiple tier options, while Customer Portal, Report Builder, Workflow Builder, and Platform Maintenance Fee are included in roofing plans but need to be add-ons for non-roofing plans. I need to update Subscription.tsx, CreateSubscriptionModal.tsx, and EditSubscriptionModal.tsx to reflect the new plan structure with roofing/non-roofing categories, updated license types, and the correct addon configurations.
+
+The core insight is that plans themselves (Roofing Core, Roofing Premium, Non-Roofing Starter, etc.) define what admins get, with the $5 Zuper Pay discount applying across core and premium tiers, and the license concept needs clarification around how many seats each plan includes. The conditional add-ons like Customer Portal and Report Builder only apply to non-Roofing plans. I'm realizing the plan types themselves are the license types—each admin gets assigned to one of five plan options (Roofing Core/Premium or Non-Roofing Starter/Core/Premium), and the plan determines both included features and Zuper Pay discount eligibility. So Zuper Pay is a $100 add-on, and the $5 discount applies to the base plan price per license when Core or Premium customers select it. The old system had separate license types for with/without Zuper Pay, but now it seems like Zuper Pay is just an add-on that triggers a discount on the plan itself.</details></think>
+
+---
+

@@ -18,28 +18,41 @@ interface CreateSubscriptionModalProps {
 }
 
 const licenseTypes = [
-  { value: "premium_zp", label: "Roofing Premium (w/ Zuper Pay)", defaultPrice: 50 },
-  { value: "premium_no_zp", label: "Roofing Premium (w/o Zuper Pay)", defaultPrice: 50 },
+  { value: "roofing_core", label: "Roofing Core", defaultPrice: 30, group: "Roofing" },
+  { value: "roofing_premium", label: "Roofing Premium", defaultPrice: 50, group: "Roofing" },
+  { value: "non_roofing_starter", label: "Non-Roofing Starter", defaultPrice: 15, group: "Non-Roofing" },
+  { value: "non_roofing_core", label: "Non-Roofing Core", defaultPrice: 30, group: "Non-Roofing" },
+  { value: "non_roofing_premium", label: "Non-Roofing Premium", defaultPrice: 50, group: "Non-Roofing" },
 ];
 
 const addons = [
-  { id: "zuper_pay", name: "Zuper Pay", price: 100 },
-  { id: "analytics", name: "Advanced Analytics", price: 50 },
-  { id: "support", name: "Premium Support", price: 200 },
-  { id: "api", name: "API Access", price: 150 },
-  { id: "basic_user", name: "Roofing Basic User", price: 20 },
+  // Seat Add-on
+  { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, group: "Seats", description: "Login, time tracking, geo tracking, basic job view" },
+  // Zuper Connect
+  { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, group: "Zuper Connect", description: "SMS/MMS telephony with call flows, recording, CRM sync" },
+  { id: "zuper_connect_plus", name: "Zuper Connect – Plus", price: 299, group: "Zuper Connect", description: "Advanced telephony with call masking, ring groups, voicemails" },
+  { id: "zuper_connect_intelligence", name: "Zuper Connect – Intelligence", price: 499, group: "Zuper Connect", description: "AI telephony with summaries, responder, 3-yr storage" },
+  // Zuper Fleet
+  { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, group: "Zuper Fleet", description: "GPS tracking, AI safety cams, health monitoring" },
+  { id: "zuper_fleet_safetycam", name: "Zuper Fleet – SafetyCam AI", price: 35, group: "Zuper Fleet", description: "Dashcam for driver monitoring, safety scoring" },
+  { id: "zuper_fleet_gps", name: "Zuper Fleet – GPS with Vehicle Health", price: 30, group: "Zuper Fleet", description: "Real-time GPS, predictive alerts" },
+  // Platform Features (included in Roofing, add-on for Non-Roofing)
+  { id: "customer_portal", name: "Customer Portal", price: 50, group: "Platform Features", description: "Branded self-service portal for jobs, invoices, and requests" },
+  { id: "report_builder", name: "Report Builder", price: 75, group: "Platform Features", description: "Advanced reporting for custom dashboards and KPIs" },
+  { id: "workflow_builder", name: "Workflow Builder", price: 80, group: "Platform Features", description: "Visual automation for processes (up to 5,000 executions/mo)" },
+  { id: "platform_maintenance", name: "Platform Maintenance Fee", price: 100, group: "Platform Features", description: "Annual infrastructure, maintenance, and compliance" },
 ];
 
 export default function CreateSubscriptionModal({
   isOpen,
   onClose,
 }: CreateSubscriptionModalProps) {
-  const [plan, setPlan] = useState("premium");
+  const [plan, setPlan] = useState("roofing_premium");
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annually">("monthly");
   const [licenses, setLicenses] = useState<License[]>([
-    { id: "1", type: "premium_zp", quantity: 10, pricePerLicense: 50 },
+    { id: "1", type: "roofing_premium", quantity: 10, pricePerLicense: 50 },
   ]);
-  const [selectedAddons, setSelectedAddons] = useState<string[]>(["zuper_pay"]);
+  const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
   const [trialPeriod, setTrialPeriod] = useState<string>("none");
   const [customTrialDate, setCustomTrialDate] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -153,16 +166,23 @@ export default function CreateSubscriptionModal({
                     onChange={(e) => setPlan(e.target.value)}
                     className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <option value="premium">Premium</option>
-                    <option value="standard" disabled>
-                      Standard (Coming Soon)
-                    </option>
-                    <option value="core" disabled>
-                      Core (Coming Soon)
-                    </option>
+                    <optgroup label="Roofing Plans">
+                      <option value="roofing_core">Roofing Core</option>
+                      <option value="roofing_premium">Roofing Premium</option>
+                    </optgroup>
+                    <optgroup label="Non-Roofing Plans">
+                      <option value="non_roofing_starter">Non-Roofing Starter</option>
+                      <option value="non_roofing_core">Non-Roofing Core</option>
+                      <option value="non_roofing_premium">Non-Roofing Premium</option>
+                    </optgroup>
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
+                {(plan === "roofing_core" || plan === "roofing_premium" || plan === "non_roofing_core" || plan === "non_roofing_premium") && (
+                  <p className="mt-1.5 text-xs text-green-600">
+                    Core & Premium plans receive a $5/license discount with Zuper Pay.
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -303,26 +323,59 @@ export default function CreateSubscriptionModal({
             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">
               Add-ons (Optional)
             </h3>
-            <div className="space-y-2">
-              {addons.map((addon) => (
-                <label
-                  key={addon.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:border-blue-300 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedAddons.includes(addon.id)}
-                      onChange={() => toggleAddon(addon.id)}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-gray-900">{addon.name}</span>
+            <div className="space-y-4">
+              {(() => {
+                const groups = [...new Set(addons.map(a => a.group))];
+                return groups.map(group => (
+                  <div key={group}>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{group}</p>
+                    {group === "Platform Features" && plan.startsWith("roofing_") && (
+                      <p className="text-xs text-green-600 mb-2">✓ Included in your Roofing plan at no extra cost</p>
+                    )}
+                    {group === "Platform Features" && !plan.startsWith("roofing_") && (
+                      <p className="text-xs text-amber-600 mb-2">Charged as add-ons for Non-Roofing plans</p>
+                    )}
+                    <div className="space-y-2">
+                      {addons.filter(a => a.group === group).map((addon) => {
+                        const isIncluded = group === "Platform Features" && plan.startsWith("roofing_");
+                        return (
+                          <label
+                            key={addon.id}
+                            className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                              isIncluded
+                                ? "bg-green-50 border-green-200"
+                                : selectedAddons.includes(addon.id)
+                                ? "bg-blue-50 border-blue-200"
+                                : "bg-gray-50 border-gray-200 hover:border-blue-300"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={isIncluded || selectedAddons.includes(addon.id)}
+                                onChange={() => !isIncluded && toggleAddon(addon.id)}
+                                disabled={isIncluded}
+                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50"
+                              />
+                              <div>
+                                <span className="text-sm text-gray-900">{addon.name}</span>
+                                <p className="text-xs text-gray-500">{addon.description}</p>
+                              </div>
+                            </div>
+                            <span className="text-sm text-gray-600 flex-shrink-0 ml-4">
+                              {isIncluded ? (
+                                <span className="text-green-600 font-medium">Included</span>
+                              ) : (
+                                <>{formatCurrency(addon.price)}/mo</>
+                              )}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <span className="text-sm text-gray-600">
-                    {formatCurrency(addon.price)}/month
-                  </span>
-                </label>
-              ))}
+                ));
+              })()}
             </div>
           </section>
 

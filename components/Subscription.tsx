@@ -35,12 +35,21 @@ const mockSubscription = {
   licenses: [
     {
       id: "1",
-      type: "premium_zp",
+      type: "roofing_premium",
       purchased: 10,
       active: 8,
       pricePerLicense: 50,
       discountType: "percentage" as "none" | "fixed" | "percentage",
       discountValue: 10,
+    },
+    {
+      id: "2",
+      type: "roofing_core",
+      purchased: 5,
+      active: 4,
+      pricePerLicense: 30,
+      discountType: "none" as "none" | "fixed" | "percentage",
+      discountValue: 0,
     },
   ],
   nonBillableLicenses: [
@@ -58,9 +67,13 @@ const mockSubscription = {
     },
   ],
   addons: [
-    { id: "zuper_pay", name: "Zuper Pay", price: 100, discountType: "fixed" as const, discountValue: 20 },
-    { id: "analytics", name: "Advanced Analytics", price: 50, discountType: "none" as const, discountValue: 0 },
-    { id: "basic_user", name: "Roofing Basic User", price: 20, discountType: "none" as const, discountValue: 0 },
+    { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, discountType: "none" as const, discountValue: 0 },
+    { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, discountType: "none" as const, discountValue: 0 },
+    { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, discountType: "none" as const, discountValue: 0 },
+    { id: "customer_portal", name: "Customer Portal", price: 0, discountType: "none" as const, discountValue: 0 },
+    { id: "report_builder", name: "Report Builder", price: 0, discountType: "none" as const, discountValue: 0 },
+    { id: "workflow_builder", name: "Workflow Builder", price: 0, discountType: "none" as const, discountValue: 0 },
+    { id: "platform_maintenance", name: "Platform Maintenance Fee", price: 0, discountType: "none" as const, discountValue: 0 },
   ],
   oneTimeCharges: [
     { id: "implementation", name: "Implementation Fee", amount: 2500, status: "paid" as const, paidDate: "2024-10-15", discountType: "none" as const, discountValue: 0 },
@@ -76,8 +89,11 @@ const mockSubscription = {
 };
 
 const licenseTypeLabels: Record<string, string> = {
-  premium_zp: "Roofing Premium (w/ Zuper Pay)",
-  premium_no_zp: "Roofing Premium (w/o Zuper Pay)",
+  roofing_core: "Roofing Core",
+  roofing_premium: "Roofing Premium",
+  non_roofing_starter: "Non-Roofing Starter",
+  non_roofing_core: "Non-Roofing Core",
+  non_roofing_premium: "Non-Roofing Premium",
 };
 
 // Sync error messages - Context: Sync between Chargebee and Internal Admin
@@ -179,7 +195,7 @@ export default function Subscription() {
 
   // Prepare data for edit modal
   const editModalData = {
-    plan: "premium",
+    plan: "roofing_premium",
     billingCycle: subscription.billingCycle.toLowerCase() as "monthly" | "quarterly" | "annually",
     licenses: subscription.licenses.map((lic) => ({
       id: lic.id,

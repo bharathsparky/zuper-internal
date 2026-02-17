@@ -56,22 +56,29 @@ interface EditSubscriptionModalProps {
 }
 
 const licenseTypes = [
-  { value: "premium_zp", label: "Roofing Premium (w/ Zuper Pay)", defaultPrice: 50 },
-  { value: "premium_no_zp", label: "Roofing Premium (w/o Zuper Pay)", defaultPrice: 50 },
+  { value: "roofing_core", label: "Roofing Core", defaultPrice: 30, group: "Roofing" },
+  { value: "roofing_premium", label: "Roofing Premium", defaultPrice: 50, group: "Roofing" },
+  { value: "non_roofing_starter", label: "Non-Roofing Starter", defaultPrice: 15, group: "Non-Roofing" },
+  { value: "non_roofing_core", label: "Non-Roofing Core", defaultPrice: 30, group: "Non-Roofing" },
+  { value: "non_roofing_premium", label: "Non-Roofing Premium", defaultPrice: 50, group: "Non-Roofing" },
 ];
 
 const availableAddons = [
-  { id: "zuper_pay", name: "Zuper Pay", price: 100, description: "Accept payments in-field" },
-  { id: "analytics", name: "Advanced Analytics", price: 50, description: "Deep insights & reporting" },
-  { id: "support", name: "Premium Support", price: 200, description: "24/7 priority support" },
-  { id: "api", name: "API Access", price: 150, description: "Custom integrations" },
-  { id: "branding", name: "Custom Branding", price: 75, description: "White-label your portal" },
-  { id: "data_export", name: "Data Export", price: 25, description: "Export data to CSV/Excel" },
-  { id: "sso", name: "SSO Integration", price: 100, description: "Single sign-on support" },
-  { id: "webhooks", name: "Webhooks", price: 50, description: "Real-time event notifications" },
-  { id: "scheduling", name: "Advanced Scheduling", price: 80, description: "Smart route optimization" },
-  { id: "inventory", name: "Inventory Management", price: 120, description: "Track parts & materials" },
-  { id: "basic_user", name: "Roofing Basic User", price: 20, description: "Basic roofing user access" },
+  // Seat Add-on
+  { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, group: "Seats", description: "Login, time tracking, geo tracking, basic job view" },
+  // Zuper Connect
+  { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, group: "Zuper Connect", description: "SMS/MMS telephony with call flows, recording, CRM sync" },
+  { id: "zuper_connect_plus", name: "Zuper Connect – Plus", price: 299, group: "Zuper Connect", description: "Advanced telephony with call masking, ring groups, voicemails" },
+  { id: "zuper_connect_intelligence", name: "Zuper Connect – Intelligence", price: 499, group: "Zuper Connect", description: "AI telephony with summaries, responder, 3-yr storage" },
+  // Zuper Fleet
+  { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, group: "Zuper Fleet", description: "GPS tracking, AI safety cams, health monitoring" },
+  { id: "zuper_fleet_safetycam", name: "Zuper Fleet – SafetyCam AI", price: 35, group: "Zuper Fleet", description: "Dashcam for driver monitoring, safety scoring" },
+  { id: "zuper_fleet_gps", name: "Zuper Fleet – GPS with Vehicle Health", price: 30, group: "Zuper Fleet", description: "Real-time GPS, predictive alerts" },
+  // Platform Features (included in Roofing, add-on for Non-Roofing)
+  { id: "customer_portal", name: "Customer Portal", price: 50, group: "Platform Features", description: "Branded self-service portal for jobs, invoices, and requests" },
+  { id: "report_builder", name: "Report Builder", price: 75, group: "Platform Features", description: "Advanced reporting for custom dashboards and KPIs" },
+  { id: "workflow_builder", name: "Workflow Builder", price: 80, group: "Platform Features", description: "Visual automation for processes (up to 5,000 executions/mo)" },
+  { id: "platform_maintenance", name: "Platform Maintenance Fee", price: 100, group: "Platform Features", description: "Annual infrastructure, maintenance, and compliance" },
 ];
 
 const getLicenseLabel = (type: string) => {
@@ -516,12 +523,23 @@ export default function EditSubscriptionModal({
                       onChange={(e) => setPlan(e.target.value)}
                       className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 text-sm font-medium appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
                     >
-                      <option value="premium">Premium</option>
-                      <option value="standard" disabled>Standard (Coming Soon)</option>
-                      <option value="core" disabled>Core (Coming Soon)</option>
+                      <optgroup label="Roofing Plans">
+                        <option value="roofing_core">Roofing Core</option>
+                        <option value="roofing_premium">Roofing Premium</option>
+                      </optgroup>
+                      <optgroup label="Non-Roofing Plans">
+                        <option value="non_roofing_starter">Non-Roofing Starter</option>
+                        <option value="non_roofing_core">Non-Roofing Core</option>
+                        <option value="non_roofing_premium">Non-Roofing Premium</option>
+                      </optgroup>
                     </select>
                     <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                   </div>
+                  {(plan === "roofing_core" || plan === "roofing_premium" || plan === "non_roofing_core" || plan === "non_roofing_premium") && (
+                    <p className="mt-1.5 text-xs text-green-600">
+                      Core & Premium plans receive a $5/license discount with Zuper Pay.
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -776,130 +794,156 @@ export default function EditSubscriptionModal({
                   />
                 </div>
               </div>
-              <div className="max-h-80 overflow-y-auto">
-                {availableAddons
-                  .filter(addon => 
+              <div className="max-h-96 overflow-y-auto">
+                {(() => {
+                  const filtered = availableAddons.filter(addon => 
                     addon.name.toLowerCase().includes(addonSearch.toLowerCase()) ||
                     addon.description.toLowerCase().includes(addonSearch.toLowerCase())
-                  )
-                  .map((addon) => {
-                    const isSelected = selectedAddons.includes(addon.id);
-                    const prevAddonIds = currentSubscription.addons.map(a => a.id);
-                    const wasSelected = prevAddonIds.includes(addon.id);
-                    const isChanged = isSelected !== wasSelected;
-                    const discount = addonDiscounts[addon.id] || { discountType: "none", discountValue: 0 };
-                    const hasDiscount = discount.discountType !== "none" && discount.discountValue > 0;
-                    const discountedPrice = calculateAddonDiscountedPrice(addon);
-
+                  );
+                  const groups = [...new Set(filtered.map(a => a.group))];
+                  
+                  if (filtered.length === 0) {
                     return (
-                      <div
-                        key={addon.id}
-                        className={`border-b border-gray-100 last:border-b-0 transition-colors ${
-                          isSelected ? "bg-blue-50" : "hover:bg-gray-50"
-                        }`}
-                      >
-                        <div
-                          onClick={() => toggleAddon(addon.id)}
-                          className="flex items-center justify-between px-5 py-3 cursor-pointer"
-                        >
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <button
-                              type="button"
-                              className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
-                                isSelected 
-                                  ? "bg-blue-500" 
-                                  : "border-2 border-gray-300 bg-white hover:border-gray-400"
-                              }`}
-                            >
-                              {isSelected && <Check className="w-3 h-3 text-white" />}
-                            </button>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium text-gray-900 truncate">{addon.name}</span>
-                                {isChanged && (
-                                  <span className={`text-xs font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${
-                                    isSelected ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                                  }`}>
-                                    {isSelected ? "Adding" : "Removing"}
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-xs text-gray-500 truncate">{addon.description}</p>
-                            </div>
-                          </div>
-                          <div className="ml-4 flex-shrink-0 text-right">
-                            {hasDiscount ? (
-                              <div className="flex flex-col items-end">
-                                <span className="text-xs text-gray-400 line-through">{formatCurrency(addon.price)}/mo</span>
-                                <span className="text-sm font-semibold text-green-600">{formatCurrency(discountedPrice)}/mo</span>
-                              </div>
-                            ) : (
-                              <span className="text-sm font-semibold text-gray-900">{formatCurrency(addon.price)}/mo</span>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* Discount controls for selected addons */}
-                        {isSelected && (
-                          <div className="px-5 pb-3" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center gap-2 pl-8">
-                              <span className="text-xs font-medium text-gray-500 flex items-center gap-1">
-                                <Tag className="w-3 h-3" />
-                                Discount:
-                              </span>
-                              <select
-                                value={discount.discountType}
-                                onChange={(e) => updateAddonDiscount(
-                                  addon.id,
-                                  e.target.value as "none" | "fixed" | "percentage",
-                                  discount.discountValue
-                                )}
-                                className="h-8 px-2 bg-white border border-gray-200 rounded-md text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
-                              >
-                                <option value="none">None</option>
-                                <option value="fixed">Fixed ($)</option>
-                                <option value="percentage">Percentage (%)</option>
-                              </select>
-                              {discount.discountType !== "none" && (
-                                <div className="relative">
-                                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                                    {discount.discountType === "fixed" ? "$" : ""}
-                                  </span>
-                                  <input
-                                    type="number"
-                                    value={discount.discountValue}
-                                    onChange={(e) => updateAddonDiscount(
-                                      addon.id,
-                                      discount.discountType,
-                                      parseFloat(e.target.value) || 0
-                                    )}
-                                    placeholder="0"
-                                    className={`w-20 h-8 ${discount.discountType === "fixed" ? "pl-5" : "pl-2"} pr-5 bg-white border border-gray-200 rounded-md text-xs font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                  />
-                                  {discount.discountType === "percentage" && (
-                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">%</span>
-                                  )}
-                                </div>
-                              )}
-                              {hasDiscount && (
-                                <span className="text-xs text-green-600 font-medium">
-                                  Saving {formatCurrency(addon.price - discountedPrice)}/mo
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        )}
+                      <div className="px-5 py-8 text-center text-sm text-gray-500">
+                        No add-ons found matching &quot;{addonSearch}&quot;
                       </div>
                     );
-                  })}
-                {availableAddons.filter(addon => 
-                  addon.name.toLowerCase().includes(addonSearch.toLowerCase()) ||
-                  addon.description.toLowerCase().includes(addonSearch.toLowerCase())
-                ).length === 0 && (
-                  <div className="px-5 py-8 text-center text-sm text-gray-500">
-                    No add-ons found matching &quot;{addonSearch}&quot;
-                  </div>
-                )}
+                  }
+                  
+                  return groups.map(group => (
+                    <div key={group}>
+                      <div className="px-5 py-2 bg-gray-50 border-b border-gray-100 sticky top-0">
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{group}</span>
+                        {group === "Platform Features" && plan.startsWith("roofing_") && (
+                          <span className="ml-2 text-xs text-green-600">✓ Included in Roofing plan</span>
+                        )}
+                        {group === "Platform Features" && !plan.startsWith("roofing_") && (
+                          <span className="ml-2 text-xs text-amber-600">Add-on for Non-Roofing plans</span>
+                        )}
+                      </div>
+                      {filtered.filter(a => a.group === group).map((addon) => {
+                        const isIncluded = addon.group === "Platform Features" && plan.startsWith("roofing_");
+                        const isSelected = isIncluded || selectedAddons.includes(addon.id);
+                        const prevAddonIds = currentSubscription.addons.map(a => a.id);
+                        const wasSelected = prevAddonIds.includes(addon.id);
+                        const isChanged = !isIncluded && isSelected !== wasSelected;
+                        const discount = addonDiscounts[addon.id] || { discountType: "none", discountValue: 0 };
+                        const hasDiscount = discount.discountType !== "none" && discount.discountValue > 0;
+                        const discountedPrice = calculateAddonDiscountedPrice(addon);
+
+                        return (
+                          <div
+                            key={addon.id}
+                            className={`border-b border-gray-100 last:border-b-0 transition-colors ${
+                              isIncluded ? "bg-green-50" : isSelected ? "bg-blue-50" : "hover:bg-gray-50"
+                            }`}
+                          >
+                            <div
+                              onClick={() => !isIncluded && toggleAddon(addon.id)}
+                              className={`flex items-center justify-between px-5 py-3 ${isIncluded ? "cursor-default" : "cursor-pointer"}`}
+                            >
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <button
+                                  type="button"
+                                  className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
+                                    isIncluded
+                                      ? "bg-green-500"
+                                      : isSelected 
+                                      ? "bg-blue-500" 
+                                      : "border-2 border-gray-300 bg-white hover:border-gray-400"
+                                  }`}
+                                >
+                                  {(isSelected || isIncluded) && <Check className="w-3 h-3 text-white" />}
+                                </button>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium text-gray-900 truncate">{addon.name}</span>
+                                    {isIncluded && (
+                                      <span className="text-xs font-medium px-1.5 py-0.5 rounded flex-shrink-0 bg-green-100 text-green-700">
+                                        Included
+                                      </span>
+                                    )}
+                                    {isChanged && (
+                                      <span className={`text-xs font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${
+                                        isSelected ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                                      }`}>
+                                        {isSelected ? "Adding" : "Removing"}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-gray-500 truncate">{addon.description}</p>
+                                </div>
+                              </div>
+                              <div className="ml-4 flex-shrink-0 text-right">
+                                {isIncluded ? (
+                                  <span className="text-sm font-medium text-green-600">$0</span>
+                                ) : hasDiscount ? (
+                                  <div className="flex flex-col items-end">
+                                    <span className="text-xs text-gray-400 line-through">{formatCurrency(addon.price)}/mo</span>
+                                    <span className="text-sm font-semibold text-green-600">{formatCurrency(discountedPrice)}/mo</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-sm font-semibold text-gray-900">{formatCurrency(addon.price)}/mo</span>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Discount controls for selected addons (not for included) */}
+                            {isSelected && !isIncluded && (
+                              <div className="px-5 pb-3" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center gap-2 pl-8">
+                                  <span className="text-xs font-medium text-gray-500 flex items-center gap-1">
+                                    <Tag className="w-3 h-3" />
+                                    Discount:
+                                  </span>
+                                  <select
+                                    value={discount.discountType}
+                                    onChange={(e) => updateAddonDiscount(
+                                      addon.id,
+                                      e.target.value as "none" | "fixed" | "percentage",
+                                      discount.discountValue
+                                    )}
+                                    className="h-8 px-2 bg-white border border-gray-200 rounded-md text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
+                                  >
+                                    <option value="none">None</option>
+                                    <option value="fixed">Fixed ($)</option>
+                                    <option value="percentage">Percentage (%)</option>
+                                  </select>
+                                  {discount.discountType !== "none" && (
+                                    <div className="relative">
+                                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                                        {discount.discountType === "fixed" ? "$" : ""}
+                                      </span>
+                                      <input
+                                        type="number"
+                                        value={discount.discountValue}
+                                        onChange={(e) => updateAddonDiscount(
+                                          addon.id,
+                                          discount.discountType,
+                                          parseFloat(e.target.value) || 0
+                                        )}
+                                        placeholder="0"
+                                        className={`w-20 h-8 ${discount.discountType === "fixed" ? "pl-5" : "pl-2"} pr-5 bg-white border border-gray-200 rounded-md text-xs font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                      />
+                                      {discount.discountType === "percentage" && (
+                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">%</span>
+                                      )}
+                                    </div>
+                                  )}
+                                  {hasDiscount && (
+                                    <span className="text-xs text-green-600 font-medium">
+                                      Saving {formatCurrency(addon.price - discountedPrice)}/mo
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ));
+                })()}
               </div>
             </section>
 
