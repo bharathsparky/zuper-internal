@@ -3643,7 +3643,1075 @@ Now I have a clear picture of the current codebase. Let me plan the comprehensiv
 
 - Zuper Connect and Zuper Fleet are charged add-ons with multiple tier options, while Customer Portal, Report Builder, Workflow Builder, and Platform Maintenance Fee are included in roofing plans but need to be add-ons for non-roofing plans. I need to update Subscription.tsx, CreateSubscriptionModal.tsx, and EditSubscriptionModal.tsx to reflect the new plan structure with roofing/non-roofing categories, updated license types, and the correct addon configurations.
 
-The core insight is that plans themselves (Roofing Core, Roofing Premium, Non-Roofing Starter, etc.) define what admins get, with the $5 Zuper Pay discount applying across core and premium tiers, and the license concept needs clarification around how many seats each plan includes. The conditional add-ons like Customer Portal and Report Builder only apply to non-Roofing plans. I'm realizing the plan types themselves are the license types—each admin gets assigned to one of five plan options (Roofing Core/Premium or Non-Roofing Starter/Core/Premium), and the plan determines both included features and Zuper Pay discount eligibility. So Zuper Pay is a $100 add-on, and the $5 discount applies to the base plan price per license when Core or Premium customers select it. The old system had separate license types for with/without Zuper Pay, but now it seems like Zuper Pay is just an add-on that triggers a discount on the plan itself.</details></think>
+The core insight is that plans themselves (Roofing Core, Roofing Premium, Non-Roofing Starter, etc.) define what admins get, with the $5 Zuper Pay discount applying across core and premium tiers, and the license concept needs clarification around how many seats each plan includes. The conditional add-ons like Customer Portal and Report Builder only apply to non-Roofing plans. I'm realizing the plan types themselves are the license types—each admin gets assigned to one of five plan options (Roofing Core/Premium or Non-Roofing Starter/Core/Premium), and the plan determines both included features and Zuper Pay discount eligibility. So Zuper Pay is a $100 add-on, and the $5 discount applies to the base plan price per license when Core or Premium customers select it. The old system had separate license types for with/without Zuper Pay, but now it seems like Zuper Pay is just an add-on that triggers a discount on the plan itself. Roofing) and Zuper Pay, which applies a $5 per license discount to Core and Premium plans. The add-ons include various seat and connectivity options like Zuper Connect at different tiers, Fleet management features with GPS and safety monitoring, and platform tools like Customer Portal and Report Builder that have different inclusion rules depending on the plan category.
+
+I'm setting default prices for the five plan types: Roofing Core at $30, Roofing Premium at $50, Non-Roofing Starter at $15, Non-Roofing Core at $30, and Non-Roofing Premium at $50. The key distinction is that certain features like Customer Portal, Report Builder, Workflow Builder, and Platform Maintenance Fee are included in Roofing plans but need to be add-ons for Non-Roofing plans.
+
+For the plan selection interface, I need to update the dropdown to show all five plan options instead of just the basic Premium/Basic choice, and ensure the pricing and feature inclusion logic reflects these distinctions. The model should support multiple plan types within a single subscription—a customer could have both Roofing Core and Premium seats simultaneously—so I'll maintain the flexibility of the current multi-license structure while organizing it around plan categories, specific plan types, admin seat counts, and add-ons like crew seats and feature tiers.
+
+I'm updating three main files: Subscription.tsx to reflect the new plan type labels and mock data, CreateSubscriptionModal.tsx to populate the plan and add-on dropdowns with the new options, and EditSubscriptionModal.tsx with the same updates, using identifiers like `roofing_core`, `roofing_premium`, and the non-roofing variants mapped to their display names. I need to restructure the plan dropdown to show Roofing and Non-Roofing plan categories separately, treating plan types as the license types themselves. I'll update the interface to let users select a plan, then display seat counts for each plan type in the configuration section, while also incorporating the add-ons list and noting the Zuper Pay discount and included features.</details></think>
+
+---
+
+This is a significant restructuring of the plan and add-on model. Let me plan and implement all changes systematically.
+
+---
+
+<tool-use data-tool-type="task" data-tool-name="todo_write">
+<details><summary>Tool use: **todo_write** • Todo List</summary>
+
+- [-] Update Subscription.tsx - new plan types, addons, mock data
+- [ ] Update CreateSubscriptionModal.tsx - new plan/addon structure
+- [ ] Update EditSubscriptionModal.tsx - new plan/addon structure
+- [ ] Build & verify no TypeScript errors
+- [ ] Push changes
+
+</details>
+</tool-use>
+
+---
+
+Let me update all three files. Starting with `Subscription.tsx`:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: 5, lines removed: 2
+
+```diff
+@@ -77,6 +77,9 @@
+  
+  const licenseTypeLabels: Record&lt;string, string&gt; = {
+-   premium_zp: "Roofing Premium (w/ Zuper Pay)",
+-   premium_no_zp: "Roofing Premium (w/o Zuper Pay)",
++   roofing_core: "Roofing Core",
++   roofing_premium: "Roofing Premium",
++   non_roofing_starter: "Non-Roofing Starter",
++   non_roofing_core: "Non-Roofing Core",
++   non_roofing_premium: "Non-Roofing Premium",
+  };
+  
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -36,5 +36,5 @@
+      {
+        id: "1",
+-       type: "premium_zp",
++       type: "roofing_premium",
+        purchased: 10,
+        active: 8,
+```
+
+**Chunk 2**
+Lines added: 9, lines removed: undefined
+
+```diff
+@@ -43,4 +43,13 @@
+        discountValue: 10,
+      },
++     {
++       id: "2",
++       type: "roofing_core",
++       purchased: 5,
++       active: 4,
++       pricePerLicense: 30,
++       discountType: "none" as "none" | "fixed" | "percentage",
++       discountValue: 0,
++     },
+    ],
+    nonBillableLicenses: [
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the mock addons:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: 7, lines removed: 3
+
+```diff
+@@ -68,7 +68,11 @@
+    ],
+    addons: [
+-     { id: "zuper_pay", name: "Zuper Pay", price: 100, discountType: "fixed" as const, discountValue: 20 },
+-     { id: "analytics", name: "Advanced Analytics", price: 50, discountType: "none" as const, discountValue: 0 },
+-     { id: "basic_user", name: "Roofing Basic User", price: 20, discountType: "none" as const, discountValue: 0 },
++     { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, discountType: "none" as const, discountValue: 0 },
++     { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, discountType: "none" as const, discountValue: 0 },
++     { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, discountType: "none" as const, discountValue: 0 },
++     { id: "customer_portal", name: "Customer Portal", price: 0, discountType: "none" as const, discountValue: 0 },
++     { id: "report_builder", name: "Report Builder", price: 0, discountType: "none" as const, discountValue: 0 },
++     { id: "workflow_builder", name: "Workflow Builder", price: 0, discountType: "none" as const, discountValue: 0 },
++     { id: "platform_maintenance", name: "Platform Maintenance Fee", price: 0, discountType: "none" as const, discountValue: 0 },
+    ],
+    oneTimeCharges: [
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the editModalData plan:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -196,5 +196,5 @@
+    // Prepare data for edit modal
+    const editModalData = {
+-     plan: "premium",
++     plan: "roofing_premium",
+      billingCycle: subscription.billingCycle.toLowerCase() as "monthly" | "quarterly" | "annually",
+      licenses: subscription.licenses.map((lic) =&gt; ({
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update `CreateSubscriptionModal.tsx`:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 5, lines removed: 2
+
+```diff
+@@ -19,6 +19,9 @@
+  
+  const licenseTypes = [
+-   { value: "premium_zp", label: "Roofing Premium (w/ Zuper Pay)", defaultPrice: 50 },
+-   { value: "premium_no_zp", label: "Roofing Premium (w/o Zuper Pay)", defaultPrice: 50 },
++   { value: "roofing_core", label: "Roofing Core", defaultPrice: 30, group: "Roofing" },
++   { value: "roofing_premium", label: "Roofing Premium", defaultPrice: 50, group: "Roofing" },
++   { value: "non_roofing_starter", label: "Non-Roofing Starter", defaultPrice: 15, group: "Non-Roofing" },
++   { value: "non_roofing_core", label: "Non-Roofing Core", defaultPrice: 30, group: "Non-Roofing" },
++   { value: "non_roofing_premium", label: "Non-Roofing Premium", defaultPrice: 50, group: "Non-Roofing" },
+  ];
+  
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 15, lines removed: 5
+
+```diff
+@@ -27,9 +27,19 @@
+  
+  const addons = [
+-   { id: "zuper_pay", name: "Zuper Pay", price: 100 },
+-   { id: "analytics", name: "Advanced Analytics", price: 50 },
+-   { id: "support", name: "Premium Support", price: 200 },
+-   { id: "api", name: "API Access", price: 150 },
+-   { id: "basic_user", name: "Roofing Basic User", price: 20 },
++   // Seat Add-on
++   { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, group: "Seats", description: "Login, time tracking, geo tracking, basic job view" },
++   // Zuper Connect
++   { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, group: "Zuper Connect", description: "SMS/MMS telephony with call flows, recording, CRM sync" },
++   { id: "zuper_connect_plus", name: "Zuper Connect – Plus", price: 299, group: "Zuper Connect", description: "Advanced telephony with call masking, ring groups, voicemails" },
++   { id: "zuper_connect_intelligence", name: "Zuper Connect – Intelligence", price: 499, group: "Zuper Connect", description: "AI telephony with summaries, responder, 3-yr storage" },
++   // Zuper Fleet
++   { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, group: "Zuper Fleet", description: "GPS tracking, AI safety cams, health monitoring" },
++   { id: "zuper_fleet_safetycam", name: "Zuper Fleet – SafetyCam AI", price: 35, group: "Zuper Fleet", description: "Dashcam for driver monitoring, safety scoring" },
++   { id: "zuper_fleet_gps", name: "Zuper Fleet – GPS with Vehicle Health", price: 30, group: "Zuper Fleet", description: "Real-time GPS, predictive alerts" },
++   // Platform Features (included in Roofing, add-on for Non-Roofing)
++   { id: "customer_portal", name: "Customer Portal", price: 50, group: "Platform Features", description: "Branded self-service portal for jobs, invoices, and requests" },
++   { id: "report_builder", name: "Report Builder", price: 75, group: "Platform Features", description: "Advanced reporting for custom dashboards and KPIs" },
++   { id: "workflow_builder", name: "Workflow Builder", price: 80, group: "Platform Features", description: "Visual automation for processes (up to 5,000 executions/mo)" },
++   { id: "platform_maintenance", name: "Platform Maintenance Fee", price: 100, group: "Platform Features", description: "Annual infrastructure, maintenance, and compliance" },
+  ];
+  
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the initial license state and plan dropdown:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 3, lines removed: 3
+
+```diff
+@@ -48,10 +48,10 @@
+    onClose,
+  }: CreateSubscriptionModalProps) {
+-   const [plan, setPlan] = useState("premium");
++   const [plan, setPlan] = useState("roofing_premium");
+    const [billingCycle, setBillingCycle] = useState&lt;"monthly" | "annually"&gt;("monthly");
+    const [licenses, setLicenses] = useState&lt;License[]&gt;([
+-     { id: "1", type: "premium_zp", quantity: 10, pricePerLicense: 50 },
++     { id: "1", type: "roofing_premium", quantity: 10, pricePerLicense: 50 },
+    ]);
+-   const [selectedAddons, setSelectedAddons] = useState&lt;string[]&gt;(["zuper_pay"]);
++   const [selectedAddons, setSelectedAddons] = useState&lt;string[]&gt;([]);
+    const [trialPeriod, setTrialPeriod] = useState&lt;string&gt;("none");
+    const [customTrialDate, setCustomTrialDate] = useState("");
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the Plan Selection dropdown in CreateSubscriptionModal:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 14, lines removed: 7
+
+```diff
+@@ -167,14 +167,21 @@
+                      className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    &gt;
+-                     &lt;option value="premium"&gt;Premium&lt;/option&gt;
+-                     &lt;option value="standard" disabled&gt;
+-                       Standard (Coming Soon)
+-                     &lt;/option&gt;
+-                     &lt;option value="core" disabled&gt;
+-                       Core (Coming Soon)
+-                     &lt;/option&gt;
++                     &lt;optgroup label="Roofing Plans"&gt;
++                       &lt;option value="roofing_core"&gt;Roofing Core&lt;/option&gt;
++                       &lt;option value="roofing_premium"&gt;Roofing Premium&lt;/option&gt;
++                     &lt;/optgroup&gt;
++                     &lt;optgroup label="Non-Roofing Plans"&gt;
++                       &lt;option value="non_roofing_starter"&gt;Non-Roofing Starter&lt;/option&gt;
++                       &lt;option value="non_roofing_core"&gt;Non-Roofing Core&lt;/option&gt;
++                       &lt;option value="non_roofing_premium"&gt;Non-Roofing Premium&lt;/option&gt;
++                     &lt;/optgroup&gt;
+                    &lt;/select&gt;
+                    &lt;ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" /&gt;
+                  &lt;/div&gt;
++                 {(plan === "roofing_core" || plan === "roofing_premium" || plan === "non_roofing_core" || plan === "non_roofing_premium") &amp;&amp; (
++                   &lt;p className="mt-1.5 text-xs text-green-600"&gt;
++                     Core &amp; Premium plans receive a $5/license discount with Zuper Pay.
++                   &lt;/p&gt;
++                 )}
+                &lt;/div&gt;
+                &lt;div&gt;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the addon rendering in CreateSubscriptionModal to show group headers and descriptions:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 52, lines removed: 19
+
+```diff
+@@ -324,24 +324,57 @@
+                Add-ons (Optional)
+              &lt;/h3&gt;
+-             &lt;div className="space-y-2"&gt;
+-               {addons.map((addon) =&gt; (
+-                 &lt;label
+-                   key={addon.id}
+-                   className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:border-blue-300 transition-colors"
+-                 &gt;
+-                   &lt;div className="flex items-center gap-3"&gt;
+-                     &lt;input
+-                       type="checkbox"
+-                       checked={selectedAddons.includes(addon.id)}
+-                       onChange={() =&gt; toggleAddon(addon.id)}
+-                       className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+-                     /&gt;
+-                     &lt;span className="text-sm text-gray-900"&gt;{addon.name}&lt;/span&gt;
++             &lt;div className="space-y-4"&gt;
++               {(() =&gt; {
++                 const groups = [...new Set(addons.map(a =&gt; a.group))];
++                 return groups.map(group =&gt; (
++                   &lt;div key={group}&gt;
++                     &lt;p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2"&gt;{group}&lt;/p&gt;
++                     {group === "Platform Features" &amp;&amp; plan.startsWith("roofing_") &amp;&amp; (
++                       &lt;p className="text-xs text-green-600 mb-2"&gt;✓ Included in your Roofing plan at no extra cost&lt;/p&gt;
++                     )}
++                     {group === "Platform Features" &amp;&amp; !plan.startsWith("roofing_") &amp;&amp; (
++                       &lt;p className="text-xs text-amber-600 mb-2"&gt;Charged as add-ons for Non-Roofing plans&lt;/p&gt;
++                     )}
++                     &lt;div className="space-y-2"&gt;
++                       {addons.filter(a =&gt; a.group === group).map((addon) =&gt; {
++                         const isIncluded = group === "Platform Features" &amp;&amp; plan.startsWith("roofing_");
++                         return (
++                           &lt;label
++                             key={addon.id}
++                             className={&#96;flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
++                               isIncluded
++                                 ? "bg-green-50 border-green-200"
++                                 : selectedAddons.includes(addon.id)
++                                 ? "bg-blue-50 border-blue-200"
++                                 : "bg-gray-50 border-gray-200 hover:border-blue-300"
++                             }&#96;}
++                           &gt;
++                             &lt;div className="flex items-center gap-3"&gt;
++                               &lt;input
++                                 type="checkbox"
++                                 checked={isIncluded || selectedAddons.includes(addon.id)}
++                                 onChange={() =&gt; !isIncluded &amp;&amp; toggleAddon(addon.id)}
++                                 disabled={isIncluded}
++                                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50"
++                               /&gt;
++                               &lt;div&gt;
++                                 &lt;span className="text-sm text-gray-900"&gt;{addon.name}&lt;/span&gt;
++                                 &lt;p className="text-xs text-gray-500"&gt;{addon.description}&lt;/p&gt;
++                               &lt;/div&gt;
++                             &lt;/div&gt;
++                             &lt;span className="text-sm text-gray-600 flex-shrink-0 ml-4"&gt;
++                               {isIncluded ? (
++                                 &lt;span className="text-green-600 font-medium"&gt;Included&lt;/span&gt;
++                               ) : (
++                                 &lt;&gt;{formatCurrency(addon.price)}/mo&lt;/&gt;
++                               )}
++                             &lt;/span&gt;
++                           &lt;/label&gt;
++                         );
++                       })}
++                     &lt;/div&gt;
+                    &lt;/div&gt;
+-                   &lt;span className="text-sm text-gray-600"&gt;
+-                     {formatCurrency(addon.price)}/month
+-                   &lt;/span&gt;
+-                 &lt;/label&gt;
+-               ))}
++                 ));
++               })()}
+              &lt;/div&gt;
+            &lt;/section&gt;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update `EditSubscriptionModal.tsx`:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 5, lines removed: 2
+
+```diff
+@@ -57,6 +57,9 @@
+  
+  const licenseTypes = [
+-   { value: "premium_zp", label: "Roofing Premium (w/ Zuper Pay)", defaultPrice: 50 },
+-   { value: "premium_no_zp", label: "Roofing Premium (w/o Zuper Pay)", defaultPrice: 50 },
++   { value: "roofing_core", label: "Roofing Core", defaultPrice: 30, group: "Roofing" },
++   { value: "roofing_premium", label: "Roofing Premium", defaultPrice: 50, group: "Roofing" },
++   { value: "non_roofing_starter", label: "Non-Roofing Starter", defaultPrice: 15, group: "Non-Roofing" },
++   { value: "non_roofing_core", label: "Non-Roofing Core", defaultPrice: 30, group: "Non-Roofing" },
++   { value: "non_roofing_premium", label: "Non-Roofing Premium", defaultPrice: 50, group: "Non-Roofing" },
+  ];
+  
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 15, lines removed: 11
+
+```diff
+@@ -65,15 +65,19 @@
+  
+  const availableAddons = [
+-   { id: "zuper_pay", name: "Zuper Pay", price: 100, description: "Accept payments in-field" },
+-   { id: "analytics", name: "Advanced Analytics", price: 50, description: "Deep insights &amp; reporting" },
+-   { id: "support", name: "Premium Support", price: 200, description: "24/7 priority support" },
+-   { id: "api", name: "API Access", price: 150, description: "Custom integrations" },
+-   { id: "branding", name: "Custom Branding", price: 75, description: "White-label your portal" },
+-   { id: "data_export", name: "Data Export", price: 25, description: "Export data to CSV/Excel" },
+-   { id: "sso", name: "SSO Integration", price: 100, description: "Single sign-on support" },
+-   { id: "webhooks", name: "Webhooks", price: 50, description: "Real-time event notifications" },
+-   { id: "scheduling", name: "Advanced Scheduling", price: 80, description: "Smart route optimization" },
+-   { id: "inventory", name: "Inventory Management", price: 120, description: "Track parts &amp; materials" },
+-   { id: "basic_user", name: "Roofing Basic User", price: 20, description: "Basic roofing user access" },
++   // Seat Add-on
++   { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, group: "Seats", description: "Login, time tracking, geo tracking, basic job view" },
++   // Zuper Connect
++   { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, group: "Zuper Connect", description: "SMS/MMS telephony with call flows, recording, CRM sync" },
++   { id: "zuper_connect_plus", name: "Zuper Connect – Plus", price: 299, group: "Zuper Connect", description: "Advanced telephony with call masking, ring groups, voicemails" },
++   { id: "zuper_connect_intelligence", name: "Zuper Connect – Intelligence", price: 499, group: "Zuper Connect", description: "AI telephony with summaries, responder, 3-yr storage" },
++   // Zuper Fleet
++   { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, group: "Zuper Fleet", description: "GPS tracking, AI safety cams, health monitoring" },
++   { id: "zuper_fleet_safetycam", name: "Zuper Fleet – SafetyCam AI", price: 35, group: "Zuper Fleet", description: "Dashcam for driver monitoring, safety scoring" },
++   { id: "zuper_fleet_gps", name: "Zuper Fleet – GPS with Vehicle Health", price: 30, group: "Zuper Fleet", description: "Real-time GPS, predictive alerts" },
++   // Platform Features (included in Roofing, add-on for Non-Roofing)
++   { id: "customer_portal", name: "Customer Portal", price: 50, group: "Platform Features", description: "Branded self-service portal for jobs, invoices, and requests" },
++   { id: "report_builder", name: "Report Builder", price: 75, group: "Platform Features", description: "Advanced reporting for custom dashboards and KPIs" },
++   { id: "workflow_builder", name: "Workflow Builder", price: 80, group: "Platform Features", description: "Visual automation for processes (up to 5,000 executions/mo)" },
++   { id: "platform_maintenance", name: "Platform Maintenance Fee", price: 100, group: "Platform Features", description: "Annual infrastructure, maintenance, and compliance" },
+  ];
+  
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the Plan dropdown in EditSubscriptionModal:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 14, lines removed: 3
+
+```diff
+@@ -524,10 +524,21 @@
+                        className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 text-sm font-medium appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                      &gt;
+-                       &lt;option value="premium"&gt;Premium&lt;/option&gt;
+-                       &lt;option value="standard" disabled&gt;Standard (Coming Soon)&lt;/option&gt;
+-                       &lt;option value="core" disabled&gt;Core (Coming Soon)&lt;/option&gt;
++                       &lt;optgroup label="Roofing Plans"&gt;
++                         &lt;option value="roofing_core"&gt;Roofing Core&lt;/option&gt;
++                         &lt;option value="roofing_premium"&gt;Roofing Premium&lt;/option&gt;
++                       &lt;/optgroup&gt;
++                       &lt;optgroup label="Non-Roofing Plans"&gt;
++                         &lt;option value="non_roofing_starter"&gt;Non-Roofing Starter&lt;/option&gt;
++                         &lt;option value="non_roofing_core"&gt;Non-Roofing Core&lt;/option&gt;
++                         &lt;option value="non_roofing_premium"&gt;Non-Roofing Premium&lt;/option&gt;
++                       &lt;/optgroup&gt;
+                      &lt;/select&gt;
+                      &lt;ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" /&gt;
+                    &lt;/div&gt;
++                   {(plan === "roofing_core" || plan === "roofing_premium" || plan === "non_roofing_core" || plan === "non_roofing_premium") &amp;&amp; (
++                     &lt;p className="mt-1.5 text-xs text-green-600"&gt;
++                       Core &amp; Premium plans receive a $5/license discount with Zuper Pay.
++                     &lt;/p&gt;
++                   )}
+                  &lt;/div&gt;
+  
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now I need to update the Add-ons section in EditSubscriptionModal to show group headers. Let me also add awareness of "Platform Features included in Roofing":
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 147, lines removed: 121
+
+```diff
+@@ -795,128 +795,154 @@
+                  &lt;/div&gt;
+                &lt;/div&gt;
+-               &lt;div className="max-h-80 overflow-y-auto"&gt;
+-                 {availableAddons
+-                   .filter(addon =&gt; 
++               &lt;div className="max-h-96 overflow-y-auto"&gt;
++                 {(() =&gt; {
++                   const filtered = availableAddons.filter(addon =&gt; 
+                      addon.name.toLowerCase().includes(addonSearch.toLowerCase()) ||
+                      addon.description.toLowerCase().includes(addonSearch.toLowerCase())
+-                   )
+-                   .map((addon) =&gt; {
+-                     const isSelected = selectedAddons.includes(addon.id);
+-                     const prevAddonIds = currentSubscription.addons.map(a =&gt; a.id);
+-                     const wasSelected = prevAddonIds.includes(addon.id);
+-                     const isChanged = isSelected !== wasSelected;
+-                     const discount = addonDiscounts[addon.id] || { discountType: "none", discountValue: 0 };
+-                     const hasDiscount = discount.discountType !== "none" &amp;&amp; discount.discountValue &gt; 0;
+-                     const discountedPrice = calculateAddonDiscountedPrice(addon);
++                   );
++                   const groups = [...new Set(filtered.map(a =&gt; a.group))];
++                   
++                   if (filtered.length === 0) {
++                     return (
++                       &lt;div className="px-5 py-8 text-center text-sm text-gray-500"&gt;
++                         No add-ons found matching &amp;quot;{addonSearch}&amp;quot;
++                       &lt;/div&gt;
++                     );
++                   }
++                   
++                   return groups.map(group =&gt; (
++                     &lt;div key={group}&gt;
++                       &lt;div className="px-5 py-2 bg-gray-50 border-b border-gray-100 sticky top-0"&gt;
++                         &lt;span className="text-xs font-semibold text-gray-500 uppercase tracking-wider"&gt;{group}&lt;/span&gt;
++                         {group === "Platform Features" &amp;&amp; plan.startsWith("roofing_") &amp;&amp; (
++                           &lt;span className="ml-2 text-xs text-green-600"&gt;✓ Included in Roofing plan&lt;/span&gt;
++                         )}
++                         {group === "Platform Features" &amp;&amp; !plan.startsWith("roofing_") &amp;&amp; (
++                           &lt;span className="ml-2 text-xs text-amber-600"&gt;Add-on for Non-Roofing plans&lt;/span&gt;
++                         )}
++                       &lt;/div&gt;
++                       {filtered.filter(a =&gt; a.group === group).map((addon) =&gt; {
++                         const isIncluded = addon.group === "Platform Features" &amp;&amp; plan.startsWith("roofing_");
++                         const isSelected = isIncluded || selectedAddons.includes(addon.id);
++                         const prevAddonIds = currentSubscription.addons.map(a =&gt; a.id);
++                         const wasSelected = prevAddonIds.includes(addon.id);
++                         const isChanged = !isIncluded &amp;&amp; isSelected !== wasSelected;
++                         const discount = addonDiscounts[addon.id] || { discountType: "none", discountValue: 0 };
++                         const hasDiscount = discount.discountType !== "none" &amp;&amp; discount.discountValue &gt; 0;
++                         const discountedPrice = calculateAddonDiscountedPrice(addon);
+  
+-                     return (
+-                       &lt;div
+-                         key={addon.id}
+-                         className={&#96;border-b border-gray-100 last:border-b-0 transition-colors ${
+-                           isSelected ? "bg-blue-50" : "hover:bg-gray-50"
+-                         }&#96;}
+-                       &gt;
+-                         &lt;div
+-                           onClick={() =&gt; toggleAddon(addon.id)}
+-                           className="flex items-center justify-between px-5 py-3 cursor-pointer"
+-                         &gt;
+-                           &lt;div className="flex items-center gap-3 flex-1 min-w-0"&gt;
+-                             &lt;button
+-                               type="button"
+-                               className={&#96;w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
+-                                 isSelected 
+-                                   ? "bg-blue-500" 
+-                                   : "border-2 border-gray-300 bg-white hover:border-gray-400"
+-                               }&#96;}
+-                             &gt;
+-                               {isSelected &amp;&amp; &lt;Check className="w-3 h-3 text-white" /&gt;}
+-                             &lt;/button&gt;
+-                             &lt;div className="min-w-0 flex-1"&gt;
+-                               &lt;div className="flex items-center gap-2"&gt;
+-                                 &lt;span className="text-sm font-medium text-gray-900 truncate"&gt;{addon.name}&lt;/span&gt;
+-                                 {isChanged &amp;&amp; (
+-                                   &lt;span className={&#96;text-xs font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${
+-                                     isSelected ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+-                                   }&#96;}&gt;
+-                                     {isSelected ? "Adding" : "Removing"}
+-                                   &lt;/span&gt;
+-                                 )}
+-                               &lt;/div&gt;
+-                               &lt;p className="text-xs text-gray-500 truncate"&gt;{addon.description}&lt;/p&gt;
+-                             &lt;/div&gt;
+-                           &lt;/div&gt;
+-                           &lt;div className="ml-4 flex-shrink-0 text-right"&gt;
+-                             {hasDiscount ? (
+-                               &lt;div className="flex flex-col items-end"&gt;
+-                                 &lt;span className="text-xs text-gray-400 line-through"&gt;{formatCurrency(addon.price)}/mo&lt;/span&gt;
+-                                 &lt;span className="text-sm font-semibold text-green-600"&gt;{formatCurrency(discountedPrice)}/mo&lt;/span&gt;
+-                               &lt;/div&gt;
+-                             ) : (
+-                               &lt;span className="text-sm font-semibold text-gray-900"&gt;{formatCurrency(addon.price)}/mo&lt;/span&gt;
+-                             )}
+-                           &lt;/div&gt;
+-                         &lt;/div&gt;
+-                         
+-                         {/* Discount controls for selected addons */}
+-                         {isSelected &amp;&amp; (
+-                           &lt;div className="px-5 pb-3" onClick={(e) =&gt; e.stopPropagation()}&gt;
+-                             &lt;div className="flex items-center gap-2 pl-8"&gt;
+-                               &lt;span className="text-xs font-medium text-gray-500 flex items-center gap-1"&gt;
+-                                 &lt;Tag className="w-3 h-3" /&gt;
+-                                 Discount:
+-                               &lt;/span&gt;
+-                               &lt;select
+-                                 value={discount.discountType}
+-                                 onChange={(e) =&gt; updateAddonDiscount(
+-                                   addon.id,
+-                                   e.target.value as "none" | "fixed" | "percentage",
+-                                   discount.discountValue
+-                                 )}
+-                                 className="h-8 px-2 bg-white border border-gray-200 rounded-md text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
+-                               &gt;
+-                                 &lt;option value="none"&gt;None&lt;/option&gt;
+-                                 &lt;option value="fixed"&gt;Fixed ($)&lt;/option&gt;
+-                                 &lt;option value="percentage"&gt;Percentage (%)&lt;/option&gt;
+-                               &lt;/select&gt;
+-                               {discount.discountType !== "none" &amp;&amp; (
+-                                 &lt;div className="relative"&gt;
+-                                   &lt;span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500"&gt;
+-                                     {discount.discountType === "fixed" ? "$" : ""}
+-                                   &lt;/span&gt;
+-                                   &lt;input
+-                                     type="number"
+-                                     value={discount.discountValue}
+-                                     onChange={(e) =&gt; updateAddonDiscount(
+-                                       addon.id,
+-                                       discount.discountType,
+-                                       parseFloat(e.target.value) || 0
+-                                     )}
+-                                     placeholder="0"
+-                                     className={&#96;w-20 h-8 ${discount.discountType === "fixed" ? "pl-5" : "pl-2"} pr-5 bg-white border border-gray-200 rounded-md text-xs font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500&#96;}
+-                                   /&gt;
+-                                   {discount.discountType === "percentage" &amp;&amp; (
+-                                     &lt;span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500"&gt;%&lt;/span&gt;
+-                                   )}
+-                                 &lt;/div&gt;
+-                               )}
+-                               {hasDiscount &amp;&amp; (
+-                                 &lt;span className="text-xs text-green-600 font-medium"&gt;
+-                                   Saving {formatCurrency(addon.price - discountedPrice)}/mo
+-                                 &lt;/span&gt;
+-                               )}
+-                             &lt;/div&gt;
+-                           &lt;/div&gt;
+-                         )}
+-                       &lt;/div&gt;
+-                     );
+-                   })}
+-                 {availableAddons.filter(addon =&gt; 
+-                   addon.name.toLowerCase().includes(addonSearch.toLowerCase()) ||
+-                   addon.description.toLowerCase().includes(addonSearch.toLowerCase())
+-                 ).length === 0 &amp;&amp; (
+-                   &lt;div className="px-5 py-8 text-center text-sm text-gray-500"&gt;
+-                     No add-ons found matching &amp;quot;{addonSearch}&amp;quot;
+-                   &lt;/div&gt;
+-                 )}
++                         return (
++                           &lt;div
++                             key={addon.id}
++                             className={&#96;border-b border-gray-100 last:border-b-0 transition-colors ${
++                               isIncluded ? "bg-green-50" : isSelected ? "bg-blue-50" : "hover:bg-gray-50"
++                             }&#96;}
++                           &gt;
++                             &lt;div
++                               onClick={() =&gt; !isIncluded &amp;&amp; toggleAddon(addon.id)}
++                               className={&#96;flex items-center justify-between px-5 py-3 ${isIncluded ? "cursor-default" : "cursor-pointer"}&#96;}
++                             &gt;
++                               &lt;div className="flex items-center gap-3 flex-1 min-w-0"&gt;
++                                 &lt;button
++                                   type="button"
++                                   className={&#96;w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
++                                     isIncluded
++                                       ? "bg-green-500"
++                                       : isSelected 
++                                       ? "bg-blue-500" 
++                                       : "border-2 border-gray-300 bg-white hover:border-gray-400"
++                                   }&#96;}
++                                 &gt;
++                                   {(isSelected || isIncluded) &amp;&amp; &lt;Check className="w-3 h-3 text-white" /&gt;}
++                                 &lt;/button&gt;
++                                 &lt;div className="min-w-0 flex-1"&gt;
++                                   &lt;div className="flex items-center gap-2"&gt;
++                                     &lt;span className="text-sm font-medium text-gray-900 truncate"&gt;{addon.name}&lt;/span&gt;
++                                     {isIncluded &amp;&amp; (
++                                       &lt;span className="text-xs font-medium px-1.5 py-0.5 rounded flex-shrink-0 bg-green-100 text-green-700"&gt;
++                                         Included
++                                       &lt;/span&gt;
++                                     )}
++                                     {isChanged &amp;&amp; (
++                                       &lt;span className={&#96;text-xs font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${
++                                         isSelected ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
++                                       }&#96;}&gt;
++                                         {isSelected ? "Adding" : "Removing"}
++                                       &lt;/span&gt;
++                                     )}
++                                   &lt;/div&gt;
++                                   &lt;p className="text-xs text-gray-500 truncate"&gt;{addon.description}&lt;/p&gt;
++                                 &lt;/div&gt;
++                               &lt;/div&gt;
++                               &lt;div className="ml-4 flex-shrink-0 text-right"&gt;
++                                 {isIncluded ? (
++                                   &lt;span className="text-sm font-medium text-green-600"&gt;$0&lt;/span&gt;
++                                 ) : hasDiscount ? (
++                                   &lt;div className="flex flex-col items-end"&gt;
++                                     &lt;span className="text-xs text-gray-400 line-through"&gt;{formatCurrency(addon.price)}/mo&lt;/span&gt;
++                                     &lt;span className="text-sm font-semibold text-green-600"&gt;{formatCurrency(discountedPrice)}/mo&lt;/span&gt;
++                                   &lt;/div&gt;
++                                 ) : (
++                                   &lt;span className="text-sm font-semibold text-gray-900"&gt;{formatCurrency(addon.price)}/mo&lt;/span&gt;
++                                 )}
++                               &lt;/div&gt;
++                             &lt;/div&gt;
++                             
++                             {/* Discount controls for selected addons (not for included) */}
++                             {isSelected &amp;&amp; !isIncluded &amp;&amp; (
++                               &lt;div className="px-5 pb-3" onClick={(e) =&gt; e.stopPropagation()}&gt;
++                                 &lt;div className="flex items-center gap-2 pl-8"&gt;
++                                   &lt;span className="text-xs font-medium text-gray-500 flex items-center gap-1"&gt;
++                                     &lt;Tag className="w-3 h-3" /&gt;
++                                     Discount:
++                                   &lt;/span&gt;
++                                   &lt;select
++                                     value={discount.discountType}
++                                     onChange={(e) =&gt; updateAddonDiscount(
++                                       addon.id,
++                                       e.target.value as "none" | "fixed" | "percentage",
++                                       discount.discountValue
++                                     )}
++                                     className="h-8 px-2 bg-white border border-gray-200 rounded-md text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
++                                   &gt;
++                                     &lt;option value="none"&gt;None&lt;/option&gt;
++                                     &lt;option value="fixed"&gt;Fixed ($)&lt;/option&gt;
++                                     &lt;option value="percentage"&gt;Percentage (%)&lt;/option&gt;
++                                   &lt;/select&gt;
++                                   {discount.discountType !== "none" &amp;&amp; (
++                                     &lt;div className="relative"&gt;
++                                       &lt;span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500"&gt;
++                                         {discount.discountType === "fixed" ? "$" : ""}
++                                       &lt;/span&gt;
++                                       &lt;input
++                                         type="number"
++                                         value={discount.discountValue}
++                                         onChange={(e) =&gt; updateAddonDiscount(
++                                           addon.id,
++                                           discount.discountType,
++                                           parseFloat(e.target.value) || 0
++                                         )}
++                                         placeholder="0"
++                                         className={&#96;w-20 h-8 ${discount.discountType === "fixed" ? "pl-5" : "pl-2"} pr-5 bg-white border border-gray-200 rounded-md text-xs font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500&#96;}
++                                       /&gt;
++                                       {discount.discountType === "percentage" &amp;&amp; (
++                                         &lt;span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500"&gt;%&lt;/span&gt;
++                                       )}
++                                     &lt;/div&gt;
++                                   )}
++                                   {hasDiscount &amp;&amp; (
++                                     &lt;span className="text-xs text-green-600 font-medium"&gt;
++                                       Saving {formatCurrency(addon.price - discountedPrice)}/mo
++                                     &lt;/span&gt;
++                                   )}
++                                 &lt;/div&gt;
++                               &lt;/div&gt;
++                             )}
++                           &lt;/div&gt;
++                         );
++                       })}
++                     &lt;/div&gt;
++                   ));
++                 })()}
+                &lt;/div&gt;
+              &lt;/section&gt;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="task" data-tool-name="todo_write">
+<details><summary>Tool use: **todo_write** • Todo List</summary>
+
+- [x] Update Subscription.tsx - new plan types, addons, mock data
+- [x] Update CreateSubscriptionModal.tsx - new plan/addon structure
+- [x] Update EditSubscriptionModal.tsx - new plan/addon structure
+- [-] Build & verify no TypeScript errors
+- [ ] Push changes
+
+</details>
+</tool-use>
+
+---
+
+Now let me check for lint errors and then build:
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 3 files</summary>
+      
+Lint paths:
+
+- `/Users/bharath.s/zuper-internal-admin/components/Subscription.tsx`
+- `/Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx`
+- `/Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd /Users/bharath.s/zuper-internal-admin && npx next build 2>&1 | tail -30</summary>
+
+```bash
+cd /Users/bharath.s/zuper-internal-admin && npx next build 2>&1 | tail -30
+```
+
+```
+ ✓ Compiled successfully in 1760.7ms
+   Running TypeScript ...
+   Collecting page data using 7 workers ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+   Generating static pages using 7 workers (0/9) ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+   Generating static pages using 7 workers (2/9) 
+   Generating static pages using 7 workers (4/9) 
+   Generating static pages using 7 workers (6/9) 
+ ✓ Generating static pages using 7 workers (9/9) in 277.8ms
+   Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /questbook
+├ ○ /settings/proposal-templates
+├ ○ /settings/proposal-templates/addons/new
+├ ○ /settings/proposal-templates/service-packages/edit
+└ ○ /settings/proposal-templates/service-packages/new
+
+
+○  (Static)  prerendered as static content
+
+
+```
+</details>
+</tool-use>
+
+---
+
+Build passes cleanly. Let me push the changes:
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd /Users/bharath.s/zuper-internal-admin && git add -A && git commit -m "Restructure plan types and add-ons to match new plan hierarchy
+
+Plans:
+- Roofing: Core, Premium
+- Non-Roofing: Starter, Core, Premium
+- Core/Premium get \$5 Zuper Pay discount note
+
+Add-ons:
+- Basic Seat (Crew users)
+- Zuper Connect: Text/Plus/Intelligence tiers
+- Zuper Fleet: End-to-End/SafetyCam AI/GPS tiers
+- Platform Features: Customer Portal, Report Builder, Workflow Builder, Platform Maintenance Fee
+  (included in Roofing plans, charged for Non-Roofing)" && git push</summary>
+
+```bash
+cd /Users/bharath.s/zuper-internal-admin && git add -A && git commit -m "Restructure plan types and add-ons to match new plan hierarchy
+
+Plans:
+- Roofing: Core, Premium
+- Non-Roofing: Starter, Core, Premium
+- Core/Premium get \$5 Zuper Pay discount note
+
+Add-ons:
+- Basic Seat (Crew users)
+- Zuper Connect: Text/Plus/Intelligence tiers
+- Zuper Fleet: End-to-End/SafetyCam AI/GPS tiers
+- Platform Features: Customer Portal, Report Builder, Workflow Builder, Platform Maintenance Fee
+  (included in Roofing plans, charged for Non-Roofing)" && git push
+```
+
+```
+[main 2405fe2] Restructure plan types and add-ons to match new plan hierarchy
+ 4 files changed, 677 insertions(+), 169 deletions(-)
+To github.com:bharathsparky/zuper-internal.git
+   11c65e1..2405fe2  main -&gt; main
+
+```
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="task" data-tool-name="todo_write">
+<details><summary>Tool use: **todo_write** • Todo List</summary>
+
+- [x] Update Subscription.tsx - new plan types, addons, mock data
+- [x] Update CreateSubscriptionModal.tsx - new plan/addon structure
+- [x] Update EditSubscriptionModal.tsx - new plan/addon structure
+- [x] Build & verify no TypeScript errors
+- [x] Push changes
+
+</details>
+</tool-use>
+
+---
+
+All done! ✅ Build passed and changes pushed to `origin/main` (commit `2405fe2`).
+
+Here's a summary of what was updated across all three files:
+
+**Plan Types** (replaces old `premium_zp`/`premium_no_zp`):
+| Category | Plans |
+|---|---|
+| **Roofing** | Core, Premium |
+| **Non-Roofing** | Starter, Core, Premium |
+
+The plan dropdown now shows grouped options with a note that **Core & Premium plans receive a $5/license discount with Zuper Pay**.
+
+**Add-ons** (replaces old Zuper Pay, Analytics, etc.):
+| Group | Add-ons |
+|---|---|
+| **Seats** | Basic Seat (Crew) – $20/mo |
+| **Zuper Connect** | Text ($99), Plus ($299), Intelligence ($499) |
+| **Zuper Fleet** | End-to-End ($60), SafetyCam AI ($35), GPS w/ Vehicle Health ($30) |
+| **Platform Features** | Customer Portal, Report Builder, Workflow Builder, Platform Maintenance Fee |
+
+**Platform Features** are automatically **included (free)** for Roofing plans and shown as **paid add-ons** for Non-Roofing plans — both in the Create and Edit modals.
+
+---
+
+_**User (2026-02-17 07:58Z)**_
+
+did we push the change
+
+---
+
+_**Agent (model claude-4.6-opus-high-thinking, mode Agent)**_
+
+
+
+
+
+---
+
+<think><details><summary>Thought Process</summary>
+The user is asking if we pushed the changes. Let me check the latest git status to confirm.</details></think>
+
+---
+
+Yes! The changes were pushed successfully. Here's the confirmation:
+
+- **Commit:** `2405fe2`
+- **Branch:** `main`
+- **Remote:** `origin/main` on `github.com:bharathsparky/zuper-internal.git`
+- **Files changed:** 4 files, 677 insertions, 169 deletions
+
+The Vercel deployment should pick up this commit automatically. You can check the Vercel dashboard to see the new deployment building.
+
+---
+
+_**User (2026-02-17 07:58Z)**_
+
+can we also update the details page , right now i see only the edit page has reflected the cahnges.
+
+---
+
+_**Agent (model claude-4.6-opus-high-thinking, mode Agent)**_
+
+
+
+
+
+---
+
+<think><details><summary>Thought Process</summary>
+The user is saying that the details/view page (Subscription.tsx) doesn't properly reflect the new plan structure, while the edit modal does. Let me check what the Subscription.tsx details page currently looks like by reading it, and compare with what the edit modal shows.
+
+The issue is probably that the Subscription.tsx mock data and display need to be more aligned with the new structure. Let me check the current state.</details></think>
+
+---
+
+Let me check the current state of the Subscription details page to see what's missing:
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+
 
 ---
 

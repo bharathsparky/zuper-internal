@@ -28,7 +28,7 @@ import EditSubscriptionModal from "@/components/EditSubscriptionModal";
 // Mock subscription data
 const mockSubscription = {
   hasSubscription: true,
-  planName: "Premium Plan",
+  planType: "roofing_premium" as string,
   billingCycle: "Quarterly" as const,
   nextBillingDate: "2024-12-15",
   status: "active" as const,
@@ -67,13 +67,13 @@ const mockSubscription = {
     },
   ],
   addons: [
-    { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, discountType: "none" as const, discountValue: 0 },
-    { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, discountType: "none" as const, discountValue: 0 },
-    { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, discountType: "none" as const, discountValue: 0 },
-    { id: "customer_portal", name: "Customer Portal", price: 0, discountType: "none" as const, discountValue: 0 },
-    { id: "report_builder", name: "Report Builder", price: 0, discountType: "none" as const, discountValue: 0 },
-    { id: "workflow_builder", name: "Workflow Builder", price: 0, discountType: "none" as const, discountValue: 0 },
-    { id: "platform_maintenance", name: "Platform Maintenance Fee", price: 0, discountType: "none" as const, discountValue: 0 },
+    { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, group: "Seats", description: "Login, time tracking, geo tracking, basic job view", discountType: "none" as const, discountValue: 0 },
+    { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, group: "Zuper Connect", description: "SMS/MMS telephony with call flows, recording, CRM sync", discountType: "none" as const, discountValue: 0 },
+    { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, group: "Zuper Fleet", description: "GPS tracking, AI safety cams, health monitoring", discountType: "none" as const, discountValue: 0 },
+    { id: "customer_portal", name: "Customer Portal", price: 0, group: "Platform Features", description: "Branded self-service portal for jobs, invoices, and requests", discountType: "none" as const, discountValue: 0 },
+    { id: "report_builder", name: "Report Builder", price: 0, group: "Platform Features", description: "Advanced reporting for custom dashboards and KPIs", discountType: "none" as const, discountValue: 0 },
+    { id: "workflow_builder", name: "Workflow Builder", price: 0, group: "Platform Features", description: "Visual automation for processes (up to 5,000 executions/mo)", discountType: "none" as const, discountValue: 0 },
+    { id: "platform_maintenance", name: "Platform Maintenance Fee", price: 0, group: "Platform Features", description: "Annual infrastructure, maintenance, and compliance", discountType: "none" as const, discountValue: 0 },
   ],
   oneTimeCharges: [
     { id: "implementation", name: "Implementation Fee", amount: 2500, status: "paid" as const, paidDate: "2024-10-15", discountType: "none" as const, discountValue: 0 },
@@ -331,6 +331,14 @@ export default function Subscription() {
                 <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">Plan Information</h3>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                   <div>
+                    <p className="text-sm font-medium text-gray-500 mb-1">Plan</p>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={subscription.planType.startsWith("roofing_") ? "premium" : "info"}>
+                        {licenseTypeLabels[subscription.planType] || subscription.planType}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div>
                     <p className="text-sm font-medium text-gray-500 mb-1">Billing Cycle</p>
                     <p className="text-sm text-gray-900">{subscription.billingCycle}</p>
                   </div>
@@ -345,6 +353,11 @@ export default function Subscription() {
                     <StatusBadge status={subscription.status} />
                   </div>
                 </div>
+                {(subscription.planType.includes("core") || subscription.planType.includes("premium")) && (
+                  <p className="mt-3 text-xs text-green-600">
+                    ✓ Core & Premium plans receive a $5/license discount with Zuper Pay.
+                  </p>
+                )}
               </div>
 
               {/* Collapsible Plan Section */}
@@ -484,42 +497,68 @@ export default function Subscription() {
                 {isAddonsExpanded && (
                   <div className="px-5 pb-5">
                     {subscription.addons.length > 0 ? (
-                      <div className="space-y-2">
-                        {subscription.addons.map((addon) => {
-                          const hasDiscount = addon.discountType && addon.discountType !== "none" && addon.discountValue > 0;
-                          const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType || "none", addon.discountValue || 0);
-
-                          return (
-                            <div
-                              key={addon.id}
-                              className="flex items-center justify-between py-3 px-4 bg-white rounded-lg border border-gray-200"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div>
-                                  <span className="text-sm font-medium text-gray-900">{addon.name}</span>
-                                  {hasDiscount && (
-                                    <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full">
-                                      <Tag className="w-3 h-3" />
-                                      {(addon.discountType as "fixed" | "percentage") === "fixed" ? `$${addon.discountValue} off` : `${addon.discountValue}% off`}
-                                    </span>
-                                  )}
-                                </div>
+                      <div className="space-y-4">
+                        {(() => {
+                          const groups = [...new Set(subscription.addons.map(a => a.group))];
+                          const isRoofing = subscription.planType.startsWith("roofing_");
+                          return groups.map(group => (
+                            <div key={group}>
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{group}</span>
+                                {group === "Platform Features" && isRoofing && (
+                                  <span className="text-xs text-green-600 font-medium">✓ Included in Roofing plan</span>
+                                )}
                               </div>
-                              {hasDiscount ? (
-                                <div className="flex flex-col items-end">
-                                  <span className="text-xs text-gray-400 line-through">
-                                    {formatCurrency(addon.price)}/mo
-                                  </span>
-                                  <span className="text-sm font-medium text-green-600">
-                                    {formatCurrency(discountedPrice)}/mo
-                                  </span>
-                                </div>
-                              ) : (
-                                <span className="text-sm font-medium text-gray-900">{formatCurrency(addon.price)}/mo</span>
-                              )}
+                              <div className="space-y-2">
+                                {subscription.addons.filter(a => a.group === group).map((addon) => {
+                                  const isIncluded = group === "Platform Features" && isRoofing;
+                                  const hasDiscount = addon.discountType && addon.discountType !== "none" && addon.discountValue > 0;
+                                  const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType || "none", addon.discountValue || 0);
+
+                                  return (
+                                    <div
+                                      key={addon.id}
+                                      className={`flex items-center justify-between py-3 px-4 rounded-lg border ${
+                                        isIncluded ? "bg-green-50 border-green-200" : "bg-white border-gray-200"
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <div>
+                                          <span className="text-sm font-medium text-gray-900">{addon.name}</span>
+                                          {addon.description && (
+                                            <p className="text-xs text-gray-500">{addon.description}</p>
+                                          )}
+                                          {hasDiscount && (
+                                            <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full">
+                                              <Tag className="w-3 h-3" />
+                                              {(addon.discountType as "fixed" | "percentage") === "fixed" ? `$${addon.discountValue} off` : `${addon.discountValue}% off`}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="flex-shrink-0 ml-4 text-right">
+                                        {isIncluded ? (
+                                          <span className="text-sm font-medium text-green-600">Included</span>
+                                        ) : hasDiscount ? (
+                                          <div className="flex flex-col items-end">
+                                            <span className="text-xs text-gray-400 line-through">
+                                              {formatCurrency(addon.price)}/mo
+                                            </span>
+                                            <span className="text-sm font-medium text-green-600">
+                                              {formatCurrency(discountedPrice)}/mo
+                                            </span>
+                                          </div>
+                                        ) : (
+                                          <span className="text-sm font-medium text-gray-900">{formatCurrency(addon.price)}/mo</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             </div>
-                          );
-                        })}
+                          ));
+                        })()}
                       </div>
                     ) : (
                       <div className="text-center py-4 bg-white rounded-lg border border-gray-200">
