@@ -328,10 +328,6 @@ export default function Subscription() {
                 <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">Plan Information</h3>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                   <div>
-                    <p className="text-sm font-medium text-gray-500 mb-1">Plan Name</p>
-                    <Badge variant="premium">{subscription.planName}</Badge>
-                  </div>
-                  <div>
                     <p className="text-sm font-medium text-gray-500 mb-1">Billing Cycle</p>
                     <p className="text-sm text-gray-900">{subscription.billingCycle}</p>
                   </div>
