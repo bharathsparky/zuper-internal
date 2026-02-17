@@ -32,26 +32,15 @@ const mockSubscription = {
   billingCycle: "Quarterly" as const,
   nextBillingDate: "2024-12-15",
   status: "active" as const,
-  licenses: [
-    {
-      id: "1",
-      type: "roofing_premium",
-      purchased: 10,
-      active: 8,
-      pricePerLicense: 50,
-      discountType: "percentage" as "none" | "fixed" | "percentage",
-      discountValue: 10,
-    },
-    {
-      id: "2",
-      type: "roofing_core",
-      purchased: 5,
-      active: 4,
-      pricePerLicense: 30,
-      discountType: "none" as "none" | "fixed" | "percentage",
-      discountValue: 0,
-    },
-  ],
+  license: {
+    id: "1",
+    type: "roofing_premium",
+    purchased: 10,
+    active: 8,
+    pricePerLicense: 50,
+    discountType: "percentage" as "none" | "fixed" | "percentage",
+    discountValue: 10,
+  },
   nonBillableLicenses: [
     {
       id: "nb1",
@@ -176,13 +165,9 @@ export default function Subscription() {
   };
 
   // Calculate totals with discounts
-  const licensesTotal = subscription.licenses.reduce(
-    (sum, lic) => {
-      const discountedPrice = calculateDiscountedPrice(lic.pricePerLicense, lic.discountType || "none", lic.discountValue || 0);
-      return sum + lic.purchased * discountedPrice;
-    },
-    0
-  );
+  const lic = subscription.license;
+  const licDiscountedPrice = calculateDiscountedPrice(lic.pricePerLicense, lic.discountType || "none", lic.discountValue || 0);
+  const licensesTotal = lic.purchased * licDiscountedPrice;
   const addonsTotal = subscription.addons.reduce((sum, addon) => {
     const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType || "none", addon.discountValue || 0);
     return sum + discountedPrice;
@@ -197,15 +182,15 @@ export default function Subscription() {
   const editModalData = {
     plan: "roofing_premium",
     billingCycle: subscription.billingCycle.toLowerCase() as "monthly" | "quarterly" | "annually",
-    licenses: subscription.licenses.map((lic) => ({
-      id: lic.id,
-      type: lic.type,
-      quantity: lic.purchased,
-      activeUsers: lic.active,
-      pricePerLicense: lic.pricePerLicense,
-      discountType: (lic.discountType || "none") as "none" | "fixed" | "percentage",
-      discountValue: lic.discountValue || 0,
-    })),
+    licenses: [{
+      id: subscription.license.id,
+      type: subscription.license.type,
+      quantity: subscription.license.purchased,
+      activeUsers: subscription.license.active,
+      pricePerLicense: subscription.license.pricePerLicense,
+      discountType: (subscription.license.discountType || "none") as "none" | "fixed" | "percentage",
+      discountValue: subscription.license.discountValue || 0,
+    }],
     addons: subscription.addons.map((a) => ({
       id: a.id,
       discountType: (a.discountType || "none") as "none" | "fixed" | "percentage",
@@ -253,7 +238,7 @@ export default function Subscription() {
     );
   }
 
-  const totalLicenses = subscription.licenses.reduce((sum, l) => sum + l.purchased, 0);
+  const totalLicenses = subscription.license.purchased;
   const totalNonBillable = subscription.nonBillableLicenses?.reduce((sum, l) => sum + l.count, 0) || 0;
 
   return (
@@ -329,15 +314,7 @@ export default function Subscription() {
               {/* Plan Information */}
               <div className="bg-gray-50 rounded-xl p-5">
                 <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">Plan Information</h3>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 mb-1">Plan</p>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={subscription.planType.startsWith("roofing_") ? "premium" : "info"}>
-                        {licenseTypeLabels[subscription.planType] || subscription.planType}
-                      </Badge>
-                    </div>
-                  </div>
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
                   <div>
                     <p className="text-sm font-medium text-gray-500 mb-1">Billing Cycle</p>
                     <p className="text-sm text-gray-900">{subscription.billingCycle}</p>
@@ -353,122 +330,101 @@ export default function Subscription() {
                     <StatusBadge status={subscription.status} />
                   </div>
                 </div>
-                {(subscription.planType.includes("core") || subscription.planType.includes("premium")) && (
-                  <p className="mt-3 text-xs text-green-600">
-                    ✓ Core & Premium plans receive a $5/license discount with Zuper Pay.
-                  </p>
-                )}
               </div>
 
               {/* Collapsible Plan Section */}
-              <div className="bg-gray-50 rounded-xl overflow-hidden">
-                <button
-                  onClick={() => setIsPlanExpanded(!isPlanExpanded)}
-                  className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Users className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <div className="text-left">
-                      <h3 className="text-sm font-semibold text-gray-900">Plan</h3>
-                      <p className="text-xs text-gray-500">
-                        {totalLicenses} billable{totalNonBillable > 0 ? ` · ${totalNonBillable} non-billable` : ''}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-gray-900">{formatCurrency(licensesTotal)}/mo</span>
-                    {isPlanExpanded ? (
-                      <ChevronDown className="w-5 h-5 text-gray-400" />
-                    ) : (
-                      <ChevronRight className="w-5 h-5 text-gray-400" />
-                    )}
-                  </div>
-                </button>
-                {isPlanExpanded && (
-                  <div className="px-5 pb-5 space-y-4">
-                    {/* Billable Licenses */}
-                    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-gray-100 bg-gray-50">
-                            <th className="text-left py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                            <th className="text-center py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                            <th className="text-center py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Active</th>
-                            <th className="text-center py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Discount</th>
-                            <th className="text-right py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                          {subscription.licenses.map((license) => {
-                            const hasDiscount = license.discountType && license.discountType !== "none" && license.discountValue > 0;
-                            const originalTotal = license.purchased * license.pricePerLicense;
-                            const discountedPrice = calculateDiscountedPrice(license.pricePerLicense, license.discountType || "none", license.discountValue || 0);
-                            const discountedTotal = license.purchased * discountedPrice;
-                            
-                            return (
-                              <tr key={license.id}>
-                                <td className="py-3 px-4">
-                                  <span className="text-sm font-medium text-gray-900">
-                                    {licenseTypeLabels[license.type] || license.type}
-                                  </span>
-                                </td>
-                                <td className="py-3 px-4 text-center">
-                                  <span className="text-sm text-gray-900">{license.purchased}</span>
-                                </td>
-                                <td className="py-3 px-4 text-center">
-                                  <LicenseCounter used={license.active} total={license.purchased} />
-                                </td>
-                                <td className="py-3 px-4 text-center">
-                                  {hasDiscount ? (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full">
-                                      <Tag className="w-3 h-3" />
-                                      {(license.discountType as "fixed" | "percentage") === "fixed" ? `$${license.discountValue}` : `${license.discountValue}%`}
-                                    </span>
-                                  ) : (
-                                    <span className="text-xs text-gray-400">—</span>
-                                  )}
-                                </td>
-                                <td className="py-3 px-4 text-right">
-                                  {hasDiscount ? (
-                                    <div className="flex flex-col items-end">
-                                      <span className="text-xs text-gray-400 line-through">
-                                        {formatCurrency(originalTotal)}
-                                      </span>
-                                      <span className="text-sm font-medium text-green-600">
-                                        {formatCurrency(discountedTotal)}
-                                      </span>
-                                    </div>
-                                  ) : (
-                                    <span className="text-sm font-medium text-gray-900">
-                                      {formatCurrency(originalTotal)}
-                                    </span>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+              {(() => {
+                const license = subscription.license;
+                const hasDiscount = license.discountType && license.discountType !== "none" && license.discountValue > 0;
+                const originalTotal = license.purchased * license.pricePerLicense;
+                const discountedTotal = license.purchased * licDiscountedPrice;
 
-                    {/* Non-Billable Licenses - Simplified */}
-                    {subscription.nonBillableLicenses && subscription.nonBillableLicenses.length > 0 && (
-                      <div className="flex items-center justify-between py-3 px-4 bg-white rounded-lg border border-gray-200">
-                        <div className="flex items-center gap-2">
-                          <UserX className="w-4 h-4 text-gray-400" />
-                          <span className="text-sm text-gray-600">Non-billable licenses</span>
+                return (
+                  <div className="bg-gray-50 rounded-xl overflow-hidden">
+                    <button
+                      onClick={() => setIsPlanExpanded(!isPlanExpanded)}
+                      className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <Users className="w-4 h-4 text-blue-600" />
                         </div>
-                        <div className="text-right">
-                          <span className="text-sm font-semibold text-gray-900">{totalNonBillable}</span>
-                          <span className="text-xs text-gray-500 ml-1">no charge</span>
+                        <div className="text-left">
+                          <h3 className="text-sm font-semibold text-gray-900">
+                            {licenseTypeLabels[license.type] || license.type}
+                          </h3>
+                          <p className="text-xs text-gray-500">
+                            {totalLicenses} seats{totalNonBillable > 0 ? ` · ${totalNonBillable} non-billable` : ''}
+                          </p>
                         </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-semibold text-gray-900">{formatCurrency(licensesTotal)}/mo</span>
+                        {isPlanExpanded ? (
+                          <ChevronDown className="w-5 h-5 text-gray-400" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5 text-gray-400" />
+                        )}
+                      </div>
+                    </button>
+                    {isPlanExpanded && (
+                      <div className="px-5 pb-5 space-y-4">
+                        {/* Plan Details */}
+                        <div className="bg-white rounded-lg border border-gray-200 p-4">
+                          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 mb-1">Seats</p>
+                              <p className="text-sm font-semibold text-gray-900">{license.purchased}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 mb-1">Active</p>
+                              <LicenseCounter used={license.active} total={license.purchased} />
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 mb-1">Price/Seat</p>
+                              <p className="text-sm font-semibold text-gray-900">{formatCurrency(license.pricePerLicense)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 mb-1">Discount</p>
+                              {hasDiscount ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full">
+                                  <Tag className="w-3 h-3" />
+                                  {license.discountType === "fixed" ? `$${license.discountValue} off` : `${license.discountValue}% off`}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-gray-400">—</span>
+                              )}
+                            </div>
+                          </div>
+                          {hasDiscount && (
+                            <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+                              <span className="text-xs text-gray-500">Total</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-400 line-through">{formatCurrency(originalTotal)}</span>
+                                <span className="text-sm font-semibold text-green-600">{formatCurrency(discountedTotal)}/mo</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Non-Billable Licenses */}
+                        {subscription.nonBillableLicenses && subscription.nonBillableLicenses.length > 0 && (
+                          <div className="flex items-center justify-between py-3 px-4 bg-white rounded-lg border border-gray-200">
+                            <div className="flex items-center gap-2">
+                              <UserX className="w-4 h-4 text-gray-400" />
+                              <span className="text-sm text-gray-600">Non-billable licenses</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-sm font-semibold text-gray-900">{totalNonBillable}</span>
+                              <span className="text-xs text-gray-500 ml-1">no charge</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
-                )}
-              </div>
+                );
+              })()}
 
               {/* Collapsible Add-ons Section */}
               <div className="bg-gray-50 rounded-xl overflow-hidden">

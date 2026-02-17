@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import {
   X,
   Plus,
-  Trash2,
   Minus,
   ChevronDown,
   AlertTriangle,
@@ -90,17 +89,16 @@ export default function EditSubscriptionModal({
   onClose,
   currentSubscription,
 }: EditSubscriptionModalProps) {
+  const initLicense = currentSubscription.licenses[0];
   const [plan, setPlan] = useState(currentSubscription.plan);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "quarterly" | "annually">(
     currentSubscription.billingCycle
   );
-  const [licenses, setLicenses] = useState<License[]>(
-    currentSubscription.licenses.map(lic => ({
-      ...lic,
-      discountType: lic.discountType || "none",
-      discountValue: lic.discountValue || 0,
-    }))
-  );
+  const [quantity, setQuantity] = useState(initLicense?.quantity || 1);
+  const [activeUsers] = useState(initLicense?.activeUsers || 0);
+  const [pricePerSeat, setPricePerSeat] = useState(initLicense?.pricePerLicense || 0);
+  const [discountType, setDiscountType] = useState<"none" | "fixed" | "percentage">(initLicense?.discountType || "none");
+  const [discountValue, setDiscountValue] = useState(initLicense?.discountValue || 0);
   const [addonDiscounts, setAddonDiscounts] = useState<Record<string, { discountType: "none" | "fixed" | "percentage"; discountValue: number }>>(
     currentSubscription.addons.reduce((acc, addon) => ({
       ...acc,
@@ -122,13 +120,13 @@ export default function EditSubscriptionModal({
 
   useEffect(() => {
     if (isOpen) {
+      const lic = currentSubscription.licenses[0];
       setPlan(currentSubscription.plan);
       setBillingCycle(currentSubscription.billingCycle);
-      setLicenses(currentSubscription.licenses.map(lic => ({
-        ...lic,
-        discountType: lic.discountType || "none",
-        discountValue: lic.discountValue || 0,
-      })));
+      setQuantity(lic?.quantity || 1);
+      setPricePerSeat(lic?.pricePerLicense || 0);
+      setDiscountType(lic?.discountType || "none");
+      setDiscountValue(lic?.discountValue || 0);
       setSelectedAddons(currentSubscription.addons.map(a => a.id));
       setAddonDiscounts(currentSubscription.addons.reduce((acc, addon) => ({
         ...acc,
@@ -143,69 +141,22 @@ export default function EditSubscriptionModal({
 
   if (!isOpen) return null;
 
-  const updateLicenseQuantity = (id: string, delta: number) => {
-    setLicenses((prev) =>
-      prev.map((lic) =>
-        lic.id === id
-          ? { ...lic, quantity: Math.max(0, lic.quantity + delta) }
-          : lic
-      )
-    );
-  };
-
-  const updateLicensePrice = (id: string, price: number) => {
-    setLicenses((prev) =>
-      prev.map((lic) => (lic.id === id ? { ...lic, pricePerLicense: price } : lic))
-    );
-  };
-
-  const removeLicense = (id: string) => {
-    setLicenses((prev) => prev.filter((lic) => lic.id !== id));
-  };
-
-  const addLicense = () => {
-    const usedTypes = licenses.map((l) => l.type);
-    const availableType = licenseTypes.find((t) => !usedTypes.includes(t.value));
-    if (availableType) {
-      setLicenses((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          type: availableType.value,
-          quantity: 1,
-          activeUsers: 0,
-          pricePerLicense: availableType.defaultPrice,
-          discountType: "none",
-          discountValue: 0,
-        },
-      ]);
+  const handlePlanChange = (newPlan: string) => {
+    setPlan(newPlan);
+    const planDef = licenseTypes.find((t) => t.value === newPlan);
+    if (planDef) {
+      setPricePerSeat(planDef.defaultPrice);
     }
   };
 
-  const updateLicenseDiscount = (id: string, discountType: "none" | "fixed" | "percentage", discountValue: number) => {
-    setLicenses((prev) =>
-      prev.map((lic) =>
-        lic.id === id ? { ...lic, discountType, discountValue } : lic
-      )
-    );
+  const calculateDiscountedSeatPrice = () => {
+    if (discountType === "none" || discountValue === 0) return pricePerSeat;
+    if (discountType === "fixed") return Math.max(0, pricePerSeat - discountValue);
+    if (discountType === "percentage") return pricePerSeat * (1 - discountValue / 100);
+    return pricePerSeat;
   };
 
-  const calculateDiscountedPrice = (license: License) => {
-    if (license.discountType === "none" || license.discountValue === 0) {
-      return license.pricePerLicense;
-    }
-    if (license.discountType === "fixed") {
-      return Math.max(0, license.pricePerLicense - license.discountValue);
-    }
-    if (license.discountType === "percentage") {
-      return license.pricePerLicense * (1 - license.discountValue / 100);
-    }
-    return license.pricePerLicense;
-  };
-
-  const calculateLicenseSubtotal = (license: License) => {
-    return license.quantity * calculateDiscountedPrice(license);
-  };
+  const planSubtotal = quantity * calculateDiscountedSeatPrice();
 
   const toggleAddon = (addonId: string) => {
     setSelectedAddons((prev) => {
@@ -267,19 +218,14 @@ export default function EditSubscriptionModal({
   };
 
   // Calculate totals
-  const licensesTotal = licenses.reduce(
-    (sum, lic) => sum + calculateLicenseSubtotal(lic),
-    0
-  );
+  const licensesTotal = planSubtotal;
   const addonsTotal = availableAddons
     .filter((a) => selectedAddons.includes(a.id))
     .reduce((sum, a) => sum + calculateAddonDiscountedPrice(a), 0);
   const grandTotal = licensesTotal + addonsTotal;
 
-  const prevLicensesTotal = currentSubscription.licenses.reduce(
-    (sum, lic) => sum + lic.quantity * lic.pricePerLicense,
-    0
-  );
+  const prevLic = currentSubscription.licenses[0];
+  const prevLicensesTotal = prevLic ? prevLic.quantity * prevLic.pricePerLicense : 0;
   const prevAddonsTotal = availableAddons
     .filter((a) => currentSubscription.addons.some(addon => addon.id === a.id))
     .reduce((sum, a) => sum + a.price, 0);
@@ -290,38 +236,48 @@ export default function EditSubscriptionModal({
   const getChanges = () => {
     const changes: { type: string; description: string; from?: string; to?: string }[] = [];
 
-    licenses.forEach((lic) => {
-      const prevLic = currentSubscription.licenses.find((l) => l.type === lic.type);
-      if (prevLic) {
-        if (lic.quantity !== prevLic.quantity) {
-          const diff = lic.quantity - prevLic.quantity;
-          changes.push({
-            type: "license",
-            description: getLicenseLabel(lic.type),
-            from: `${prevLic.quantity} licenses`,
-            to: `${lic.quantity} licenses (${diff > 0 ? "+" : ""}${diff})`,
-          });
-        }
-      } else {
-        changes.push({
-          type: "license",
-          description: getLicenseLabel(lic.type),
-          from: "Not added",
-          to: `${lic.quantity} licenses`,
-        });
-      }
-    });
+    // Plan type change
+    if (plan !== currentSubscription.plan) {
+      changes.push({
+        type: "plan",
+        description: "Plan",
+        from: getLicenseLabel(currentSubscription.plan),
+        to: getLicenseLabel(plan),
+      });
+    }
 
-    currentSubscription.licenses.forEach((prevLic) => {
-      if (!licenses.find((l) => l.type === prevLic.type)) {
-        changes.push({
-          type: "license",
-          description: getLicenseLabel(prevLic.type),
-          from: `${prevLic.quantity} licenses`,
-          to: "Removed",
-        });
-      }
-    });
+    // Seat quantity change
+    if (prevLic && quantity !== prevLic.quantity) {
+      const diff = quantity - prevLic.quantity;
+      changes.push({
+        type: "seats",
+        description: getLicenseLabel(plan),
+        from: `${prevLic.quantity} seats`,
+        to: `${quantity} seats (${diff > 0 ? "+" : ""}${diff})`,
+      });
+    }
+
+    // Price change
+    if (prevLic && pricePerSeat !== prevLic.pricePerLicense) {
+      changes.push({
+        type: "price",
+        description: `${getLicenseLabel(plan)} price`,
+        from: formatCurrency(prevLic.pricePerLicense),
+        to: formatCurrency(pricePerSeat),
+      });
+    }
+
+    // Discount change
+    if (prevLic && (discountType !== (prevLic.discountType || "none") || discountValue !== (prevLic.discountValue || 0))) {
+      changes.push({
+        type: "discount",
+        description: `${getLicenseLabel(plan)} discount`,
+        from: (prevLic.discountType || "none") === "none" ? "No discount" :
+              prevLic.discountType === "fixed" ? `$${prevLic.discountValue} off` : `${prevLic.discountValue}% off`,
+        to: discountType === "none" ? "No discount" :
+            discountType === "fixed" ? `$${discountValue} off` : `${discountValue}% off`,
+      });
+    }
 
     const prevAddonIds = currentSubscription.addons.map(a => a.id);
     const addedAddons = selectedAddons.filter(
@@ -404,22 +360,8 @@ export default function EditSubscriptionModal({
   const changes = getChanges();
   const hasChanges = changes.length > 0;
 
-  const getConflicts = () => {
-    const conflicts: { license: string; activeUsers: number; newQuantity: number }[] = [];
-    licenses.forEach((lic) => {
-      if (lic.quantity < lic.activeUsers) {
-        conflicts.push({
-          license: getLicenseLabel(lic.type),
-          activeUsers: lic.activeUsers,
-          newQuantity: lic.quantity,
-        });
-      }
-    });
-    return conflicts;
-  };
-
-  const conflicts = getConflicts();
-  const hasConflicts = conflicts.length > 0;
+  const isConflict = quantity < activeUsers;
+  const hasConflicts = isConflict;
 
   const handleSave = async () => {
     if (hasConflicts) return;
@@ -520,7 +462,7 @@ export default function EditSubscriptionModal({
                   <div className="relative">
                     <select
                       value={plan}
-                      onChange={(e) => setPlan(e.target.value)}
+                      onChange={(e) => handlePlanChange(e.target.value)}
                       className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 text-sm font-medium appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
                     >
                       <optgroup label="Roofing Plans">
@@ -580,197 +522,152 @@ export default function EditSubscriptionModal({
               </div>
             </section>
 
-            {/* Plan Section */}
+            {/* Plan Seats Section */}
             <section>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Plan</h3>
-                <button
-                  onClick={addLicense}
-                  disabled={licenses.length >= licenseTypes.length}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-700 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center gap-1.5"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Plan Type
-                </button>
-              </div>
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">Seats</h3>
+              <div
+                className={`p-5 rounded-xl border transition-all ${
+                  isConflict
+                    ? "bg-red-50 border-red-200 shadow-sm"
+                    : prevLic && quantity !== prevLic.quantity
+                    ? "bg-white border-blue-300 shadow-md ring-1 ring-blue-100"
+                    : "bg-white border-gray-200 shadow-sm"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900">
+                      {getLicenseLabel(plan)}
+                    </h4>
+                    <p className="text-xs text-gray-500 mt-0.5">{activeUsers} active users</p>
+                  </div>
+                </div>
 
-              <div className="space-y-4">
-                {licenses.map((license) => {
-                  const prevLicense = currentSubscription.licenses.find((l) => l.type === license.type);
-                  const isChanged = prevLicense && license.quantity !== prevLicense.quantity;
-                  const isConflict = license.quantity < license.activeUsers;
+                {isConflict && (
+                  <div className="mb-4 p-3 bg-red-100 border border-red-200 rounded-lg flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-red-700 font-medium">
+                      Cannot reduce below {activeUsers} active users
+                    </p>
+                  </div>
+                )}
 
-                  return (
-                    <div
-                      key={license.id}
-                      className={`p-5 rounded-xl border transition-all ${
-                        isConflict
-                          ? "bg-red-50 border-red-200 shadow-sm"
-                          : isChanged
-                          ? "bg-white border-blue-300 shadow-md ring-1 ring-blue-100"
-                          : "bg-white border-gray-200 shadow-sm"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <h4 className="text-sm font-semibold text-gray-900">
-                            {getLicenseLabel(license.type)}
-                          </h4>
-                          <p className="text-xs text-gray-500 mt-0.5">{license.activeUsers} active users</p>
-                        </div>
-                        <button
-                          onClick={() => removeLicense(license.id)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-red-500 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      {isConflict && (
-                        <div className="mb-4 p-3 bg-red-100 border border-red-200 rounded-lg flex items-start gap-2">
-                          <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
-                          <p className="text-xs text-red-700 font-medium">
-                            Cannot reduce below {license.activeUsers} active users
-                          </p>
-                        </div>
+                <div className="grid grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-2">
+                      Seats
+                      {prevLic && quantity !== prevLic.quantity && (
+                        <span className="text-blue-600 font-normal ml-1">(was {prevLic.quantity})</span>
                       )}
+                    </label>
+                    <div className="inline-flex items-center h-10 bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm">
+                      <button
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        className="w-10 h-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 border-r border-gray-300 transition-colors"
+                      >
+                        <Minus className="w-4 h-4 text-gray-600" />
+                      </button>
+                      <input
+                        type="number"
+                        value={quantity}
+                        onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-12 h-full text-center text-sm font-bold text-gray-900 focus:outline-none bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <button
+                        onClick={() => setQuantity(quantity + 1)}
+                        className="w-10 h-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 border-l border-gray-300 transition-colors"
+                      >
+                        <Plus className="w-4 h-4 text-gray-600" />
+                      </button>
+                    </div>
+                  </div>
 
-                      {/* Row 1: Quantity, Price, Discount */}
-                      <div className="grid grid-cols-4 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-2">
-                            Quantity
-                            {isChanged && prevLicense && (
-                              <span className="text-blue-600 font-normal ml-1">(was {prevLicense.quantity})</span>
-                            )}
-                          </label>
-                          <div className="inline-flex items-center h-10 bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm">
-                            <button
-                              onClick={() => updateLicenseQuantity(license.id, -1)}
-                              className="w-10 h-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 border-r border-gray-300 transition-colors"
-                            >
-                              <Minus className="w-4 h-4 text-gray-600" />
-                            </button>
-                            <input
-                              type="number"
-                              value={license.quantity}
-                              onChange={(e) =>
-                                setLicenses((prev) =>
-                                  prev.map((l) =>
-                                    l.id === license.id
-                                      ? { ...l, quantity: parseInt(e.target.value) || 0 }
-                                      : l
-                                  )
-                                )
-                              }
-                              className="w-12 h-full text-center text-sm font-bold text-gray-900 focus:outline-none bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            />
-                            <button
-                              onClick={() => updateLicenseQuantity(license.id, 1)}
-                              className="w-10 h-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 border-l border-gray-300 transition-colors"
-                            >
-                              <Plus className="w-4 h-4 text-gray-600" />
-                            </button>
-                          </div>
-                        </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-2">Price/Seat</label>
+                    <div className="relative h-10">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">$</span>
+                      <input
+                        type="number"
+                        value={pricePerSeat}
+                        onChange={(e) => setPricePerSeat(parseFloat(e.target.value) || 0)}
+                        className="w-full h-full pl-7 pr-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                      />
+                    </div>
+                  </div>
 
-                        <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-2">Price/License</label>
-                          <div className="relative h-10">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">$</span>
-                            <input
-                              type="number"
-                              value={license.pricePerLicense}
-                              onChange={(e) => updateLicensePrice(license.id, parseFloat(e.target.value) || 0)}
-                              className="w-full h-full pl-7 pr-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-2">
-                            <span className="flex items-center gap-1">
-                              <Tag className="w-3 h-3" />
-                              Discount
-                            </span>
-                          </label>
-                          <div className="flex h-10 gap-1">
-                            <select
-                              value={license.discountType}
-                              onChange={(e) => updateLicenseDiscount(
-                                license.id,
-                                e.target.value as "none" | "fixed" | "percentage",
-                                license.discountValue
-                              )}
-                              className="w-20 h-full px-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
-                            >
-                              <option value="none">None</option>
-                              <option value="fixed">Fixed</option>
-                              <option value="percentage">%</option>
-                            </select>
-                            {license.discountType !== "none" && (
-                              <div className="relative flex-1">
-                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                                  {license.discountType === "fixed" ? "$" : ""}
-                                </span>
-                                <input
-                                  type="number"
-                                  value={license.discountValue}
-                                  onChange={(e) => updateLicenseDiscount(
-                                    license.id,
-                                    license.discountType,
-                                    parseFloat(e.target.value) || 0
-                                  )}
-                                  placeholder="0"
-                                  className={`w-full h-full ${license.discountType === "fixed" ? "pl-6" : "pl-2.5"} pr-6 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white`}
-                                />
-                                {license.discountType === "percentage" && (
-                                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-500">%</span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-2">Subtotal</label>
-                          <div className="h-10 flex flex-col items-end justify-center px-3 bg-gray-50 border border-gray-200 rounded-lg">
-                            {license.discountType !== "none" && license.discountValue > 0 ? (
-                              <>
-                                <span className="text-xs text-gray-400 line-through">
-                                  {formatCurrency(license.quantity * license.pricePerLicense)}
-                                </span>
-                                <span className="text-sm font-bold text-green-600">
-                                  {formatCurrency(calculateLicenseSubtotal(license))}
-                                </span>
-                              </>
-                            ) : (
-                              <span className="text-sm font-bold text-gray-900">
-                                {formatCurrency(calculateLicenseSubtotal(license))}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Discount Applied Badge */}
-                      {license.discountType !== "none" && license.discountValue > 0 && (
-                        <div className="mt-3 flex items-center gap-2">
-                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-md border border-green-200">
-                            <Tag className="w-3 h-3" />
-                            {license.discountType === "fixed" 
-                              ? `$${license.discountValue} off per license`
-                              : `${license.discountValue}% discount applied`
-                            }
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-2">
+                      <span className="flex items-center gap-1">
+                        <Tag className="w-3 h-3" />
+                        Discount
+                      </span>
+                    </label>
+                    <div className="flex h-10 gap-1">
+                      <select
+                        value={discountType}
+                        onChange={(e) => setDiscountType(e.target.value as "none" | "fixed" | "percentage")}
+                        className="w-20 h-full px-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
+                      >
+                        <option value="none">None</option>
+                        <option value="fixed">Fixed</option>
+                        <option value="percentage">%</option>
+                      </select>
+                      {discountType !== "none" && (
+                        <div className="relative flex-1">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                            {discountType === "fixed" ? "$" : ""}
                           </span>
-                          <span className="text-xs text-gray-500">
-                            Saving {formatCurrency((license.pricePerLicense * license.quantity) - calculateLicenseSubtotal(license))}/mo
-                          </span>
+                          <input
+                            type="number"
+                            value={discountValue}
+                            onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
+                            placeholder="0"
+                            className={`w-full h-full ${discountType === "fixed" ? "pl-6" : "pl-2.5"} pr-6 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white`}
+                          />
+                          {discountType === "percentage" && (
+                            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-500">%</span>
+                          )}
                         </div>
                       )}
                     </div>
-                  );
-                })}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-2">Subtotal</label>
+                    <div className="h-10 flex flex-col items-end justify-center px-3 bg-gray-50 border border-gray-200 rounded-lg">
+                      {discountType !== "none" && discountValue > 0 ? (
+                        <>
+                          <span className="text-xs text-gray-400 line-through">
+                            {formatCurrency(quantity * pricePerSeat)}
+                          </span>
+                          <span className="text-sm font-bold text-green-600">
+                            {formatCurrency(planSubtotal)}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-sm font-bold text-gray-900">
+                          {formatCurrency(planSubtotal)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Discount Applied Badge */}
+                {discountType !== "none" && discountValue > 0 && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-md border border-green-200">
+                      <Tag className="w-3 h-3" />
+                      {discountType === "fixed" 
+                        ? `$${discountValue} off per seat`
+                        : `${discountValue}% discount applied`
+                      }
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      Saving {formatCurrency((pricePerSeat * quantity) - planSubtotal)}/mo
+                    </span>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -1058,7 +955,7 @@ export default function EditSubscriptionModal({
 
               <div className="p-5 space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Plan ({licenses.reduce((sum, l) => sum + l.quantity, 0)} total)</span>
+                  <span className="text-sm text-gray-600">Plan ({quantity} seats)</span>
                   <span className="text-sm font-medium text-gray-900">{formatCurrency(licensesTotal)}/mo</span>
                 </div>
                 <div className="flex justify-between items-center">

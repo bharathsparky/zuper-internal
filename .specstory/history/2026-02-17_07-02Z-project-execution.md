@@ -4711,6 +4711,830 @@ Let me check the current state of the Subscription details page to see what's mi
 
 ---
 
+<think><details><summary>Thought Process</summary>
+Now I can see the issues with the details page. The main problems:
+
+1. The "Plan Information" section still shows `planName: "Premium Plan"` - it should show the actual plan type based on the license types
+2. The Add-ons section displays all addons in a flat list without grouping (unlike the edit modal which now has groups)
+3. The Platform Features addons (Customer Portal, Report Builder, etc.) show as `$0/mo` which looks odd - they should show as "Included" for Roofing plans
+4. The add-ons don't have descriptions visible like in the edit modal
+
+Let me update the details page to:
+
+
+- Display the plan type with a badge instead of a generic name
+- Organize addons by category rather than showing them all in one list
+- Show "Included" for Platform Features on Roofing plans instead of the zero price
+- Include the Zuper Pay discount note and addon descriptions
+- Add a `group` field to the mock addon data to enable proper categorization in the display</details></think>
+
+---
+
+I can see the issues. The details page needs:
+1. **Plan Information** — still shows old `planName: "Premium Plan"`, needs to show the actual plan type (Roofing/Non-Roofing)
+2. **Add-ons section** — flat list without grouping, Platform Features show `$0/mo` instead of "Included"
+3. **No Zuper Pay discount note** on the details page
+4. **No addon descriptions or group headers**
+
+Let me update it:
+
+---
+
+<tool-use data-tool-type="task" data-tool-name="todo_write">
+<details><summary>Tool use: **todo_write** • Todo List</summary>
+
+- [-] Update Plan Information section with plan type + Zuper Pay note
+- [ ] Add group field to mock addons & group display in details
+- [ ] Show 'Included' for Roofing Platform Features instead of $0
+- [ ] Build & push changes
+
+</details>
+</tool-use>
+
+---
+
+First, update the mock data — add `group` to addons and update `planName`:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -29,5 +29,5 @@
+  const mockSubscription = {
+    hasSubscription: true,
+-   planName: "Premium Plan",
++   planType: "roofing_premium" as string,
+    billingCycle: "Quarterly" as const,
+    nextBillingDate: "2024-12-15",
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: 7, lines removed: 7
+
+```diff
+@@ -68,11 +68,11 @@
+    ],
+    addons: [
+-     { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, discountType: "none" as const, discountValue: 0 },
+-     { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, discountType: "none" as const, discountValue: 0 },
+-     { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, discountType: "none" as const, discountValue: 0 },
+-     { id: "customer_portal", name: "Customer Portal", price: 0, discountType: "none" as const, discountValue: 0 },
+-     { id: "report_builder", name: "Report Builder", price: 0, discountType: "none" as const, discountValue: 0 },
+-     { id: "workflow_builder", name: "Workflow Builder", price: 0, discountType: "none" as const, discountValue: 0 },
+-     { id: "platform_maintenance", name: "Platform Maintenance Fee", price: 0, discountType: "none" as const, discountValue: 0 },
++     { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, group: "Seats", description: "Login, time tracking, geo tracking, basic job view", discountType: "none" as const, discountValue: 0 },
++     { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, group: "Zuper Connect", description: "SMS/MMS telephony with call flows, recording, CRM sync", discountType: "none" as const, discountValue: 0 },
++     { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, group: "Zuper Fleet", description: "GPS tracking, AI safety cams, health monitoring", discountType: "none" as const, discountValue: 0 },
++     { id: "customer_portal", name: "Customer Portal", price: 0, group: "Platform Features", description: "Branded self-service portal for jobs, invoices, and requests", discountType: "none" as const, discountValue: 0 },
++     { id: "report_builder", name: "Report Builder", price: 0, group: "Platform Features", description: "Advanced reporting for custom dashboards and KPIs", discountType: "none" as const, discountValue: 0 },
++     { id: "workflow_builder", name: "Workflow Builder", price: 0, group: "Platform Features", description: "Visual automation for processes (up to 5,000 executions/mo)", discountType: "none" as const, discountValue: 0 },
++     { id: "platform_maintenance", name: "Platform Maintenance Fee", price: 0, group: "Platform Features", description: "Annual infrastructure, maintenance, and compliance", discountType: "none" as const, discountValue: 0 },
+    ],
+    oneTimeCharges: [
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the Plan Information section to show the actual plan type, category, and Zuper Pay discount note:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: 8, lines removed: undefined
+
+```diff
+@@ -331,4 +331,12 @@
+                  &lt;h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4"&gt;Plan Information&lt;/h3&gt;
+                  &lt;div className="grid grid-cols-2 lg:grid-cols-4 gap-6"&gt;
++                   &lt;div&gt;
++                     &lt;p className="text-sm font-medium text-gray-500 mb-1"&gt;Plan&lt;/p&gt;
++                     &lt;div className="flex items-center gap-2"&gt;
++                       &lt;Badge variant={subscription.planType.startsWith("roofing_") ? "premium" : "default"}&gt;
++                         {licenseTypeLabels[subscription.planType] || subscription.planType}
++                       &lt;/Badge&gt;
++                     &lt;/div&gt;
++                   &lt;/div&gt;
+                    &lt;div&gt;
+                      &lt;p className="text-sm font-medium text-gray-500 mb-1"&gt;Billing Cycle&lt;/p&gt;
+```
+
+**Chunk 2**
+Lines added: 5, lines removed: undefined
+
+```diff
+@@ -346,4 +354,9 @@
+                    &lt;/div&gt;
+                  &lt;/div&gt;
++                 {(subscription.planType.includes("core") || subscription.planType.includes("premium")) &amp;&amp; (
++                   &lt;p className="mt-3 text-xs text-green-600"&gt;
++                     ✓ Core &amp; Premium plans receive a $5/license discount with Zuper Pay.
++                   &lt;/p&gt;
++                 )}
+                &lt;/div&gt;
+  
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the Add-ons section to show grouped add-ons with descriptions, and "Included" for Platform Features:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: 61, lines removed: 35
+
+```diff
+@@ -498,40 +498,66 @@
+                    &lt;div className="px-5 pb-5"&gt;
+                      {subscription.addons.length &gt; 0 ? (
+-                       &lt;div className="space-y-2"&gt;
+-                         {subscription.addons.map((addon) =&gt; {
+-                           const hasDiscount = addon.discountType &amp;&amp; addon.discountType !== "none" &amp;&amp; addon.discountValue &gt; 0;
+-                           const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType || "none", addon.discountValue || 0);
++                       &lt;div className="space-y-4"&gt;
++                         {(() =&gt; {
++                           const groups = [...new Set(subscription.addons.map(a =&gt; a.group))];
++                           const isRoofing = subscription.planType.startsWith("roofing_");
++                           return groups.map(group =&gt; (
++                             &lt;div key={group}&gt;
++                               &lt;div className="flex items-center gap-2 mb-2"&gt;
++                                 &lt;span className="text-xs font-semibold text-gray-500 uppercase tracking-wider"&gt;{group}&lt;/span&gt;
++                                 {group === "Platform Features" &amp;&amp; isRoofing &amp;&amp; (
++                                   &lt;span className="text-xs text-green-600 font-medium"&gt;✓ Included in Roofing plan&lt;/span&gt;
++                                 )}
++                               &lt;/div&gt;
++                               &lt;div className="space-y-2"&gt;
++                                 {subscription.addons.filter(a =&gt; a.group === group).map((addon) =&gt; {
++                                   const isIncluded = group === "Platform Features" &amp;&amp; isRoofing;
++                                   const hasDiscount = addon.discountType &amp;&amp; addon.discountType !== "none" &amp;&amp; addon.discountValue &gt; 0;
++                                   const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType || "none", addon.discountValue || 0);
+  
+-                           return (
+-                             &lt;div
+-                               key={addon.id}
+-                               className="flex items-center justify-between py-3 px-4 bg-white rounded-lg border border-gray-200"
+-                             &gt;
+-                               &lt;div className="flex items-center gap-3"&gt;
+-                                 &lt;div&gt;
+-                                   &lt;span className="text-sm font-medium text-gray-900"&gt;{addon.name}&lt;/span&gt;
+-                                   {hasDiscount &amp;&amp; (
+-                                     &lt;span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full"&gt;
+-                                       &lt;Tag className="w-3 h-3" /&gt;
+-                                       {(addon.discountType as "fixed" | "percentage") === "fixed" ? &#96;$${addon.discountValue} off&#96; : &#96;${addon.discountValue}% off&#96;}
+-                                     &lt;/span&gt;
+-                                   )}
+-                                 &lt;/div&gt;
+-                               &lt;/div&gt;
+-                               {hasDiscount ? (
+-                                 &lt;div className="flex flex-col items-end"&gt;
+-                                   &lt;span className="text-xs text-gray-400 line-through"&gt;
+-                                     {formatCurrency(addon.price)}/mo
+-                                   &lt;/span&gt;
+-                                   &lt;span className="text-sm font-medium text-green-600"&gt;
+-                                     {formatCurrency(discountedPrice)}/mo
+-                                   &lt;/span&gt;
+-                                 &lt;/div&gt;
+-                               ) : (
+-                                 &lt;span className="text-sm font-medium text-gray-900"&gt;{formatCurrency(addon.price)}/mo&lt;/span&gt;
+-                               )}
+-                             &lt;/div&gt;
+-                           );
+-                         })}
++                                   return (
++                                     &lt;div
++                                       key={addon.id}
++                                       className={&#96;flex items-center justify-between py-3 px-4 rounded-lg border ${
++                                         isIncluded ? "bg-green-50 border-green-200" : "bg-white border-gray-200"
++                                       }&#96;}
++                                     &gt;
++                                       &lt;div className="flex items-center gap-3"&gt;
++                                         &lt;div&gt;
++                                           &lt;span className="text-sm font-medium text-gray-900"&gt;{addon.name}&lt;/span&gt;
++                                           {addon.description &amp;&amp; (
++                                             &lt;p className="text-xs text-gray-500"&gt;{addon.description}&lt;/p&gt;
++                                           )}
++                                           {hasDiscount &amp;&amp; (
++                                             &lt;span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full"&gt;
++                                               &lt;Tag className="w-3 h-3" /&gt;
++                                               {(addon.discountType as "fixed" | "percentage") === "fixed" ? &#96;$${addon.discountValue} off&#96; : &#96;${addon.discountValue}% off&#96;}
++                                             &lt;/span&gt;
++                                           )}
++                                         &lt;/div&gt;
++                                       &lt;/div&gt;
++                                       &lt;div className="flex-shrink-0 ml-4 text-right"&gt;
++                                         {isIncluded ? (
++                                           &lt;span className="text-sm font-medium text-green-600"&gt;Included&lt;/span&gt;
++                                         ) : hasDiscount ? (
++                                           &lt;div className="flex flex-col items-end"&gt;
++                                             &lt;span className="text-xs text-gray-400 line-through"&gt;
++                                               {formatCurrency(addon.price)}/mo
++                                             &lt;/span&gt;
++                                             &lt;span className="text-sm font-medium text-green-600"&gt;
++                                               {formatCurrency(discountedPrice)}/mo
++                                             &lt;/span&gt;
++                                           &lt;/div&gt;
++                                         ) : (
++                                           &lt;span className="text-sm font-medium text-gray-900"&gt;{formatCurrency(addon.price)}/mo&lt;/span&gt;
++                                         )}
++                                       &lt;/div&gt;
++                                     &lt;/div&gt;
++                                   );
++                                 })}
++                               &lt;/div&gt;
++                             &lt;/div&gt;
++                           ));
++                         })()}
+                        &lt;/div&gt;
+                      ) : (
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="task" data-tool-name="todo_write">
+<details><summary>Tool use: **todo_write** • Todo List</summary>
+
+- [x] Update Plan Information section with plan type + Zuper Pay note
+- [x] Add group field to mock addons & group display in details
+- [x] Show 'Included' for Roofing Platform Features instead of $0
+- [-] Build & push changes
+
+</details>
+</tool-use>
+
+---
+
+Now let me check lints and build:
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 1 file</summary>
+      
+Lint paths:
+
+- `/Users/bharath.s/zuper-internal-admin/components/Subscription.tsx`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd /Users/bharath.s/zuper-internal-admin && npx next build 2>&1 | tail -30</summary>
+
+```bash
+cd /Users/bharath.s/zuper-internal-admin && npx next build 2>&1 | tail -30
+```
+
+```
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+   ▲ Next.js 16.0.7 (Turbopack)
+
+   Creating an optimized production build ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+ ✓ Compiled successfully in 1481.8ms
+   Running TypeScript ...
+Failed to compile.
+
+./components/Subscription.tsx:336:30
+Type error: Type '"default" | "premium"' is not assignable to type '"error" | "success" | "warning" | "info" | "neutral" | "premium"'.
+  Type '"default"' is not assignable to type '"error" | "success" | "warning" | "info" | "neutral" | "premium"'.
+
+[0m [90m 334 |[39m                     [33m&lt;[39m[33mp[39m className[33m=[39m[32m"text-sm font-medium text-gray-500 mb-1"[39m[33m&gt;[39m[33mPlan[39m[33m&lt;[39m[33m/[39m[33mp[39m[33m&gt;[39m
+ [90m 335 |[39m                     [33m&lt;[39m[33mdiv[39m className[33m=[39m[32m"flex items-center gap-2"[39m[33m&gt;[39m
+[31m[1m&gt;[22m[39m[90m 336 |[39m                       [33m&lt;[39m[33mBadge[39m variant[33m=[39m{subscription[33m.[39mplanType[33m.[39mstartsWith([32m"roofing_"[39m) [33m?[39m [32m"premium"[39m [33m:[39m [32m"default"[39m}[33m&gt;[39m
+ [90m     |[39m                              [31m[1m^[22m[39m
+ [90m 337 |[39m                         {licenseTypeLabels[subscription[33m.[39mplanType] [33m||[39m subscription[33m.[39mplanType}
+ [90m 338 |[39m                       [33m&lt;[39m[33m/[39m[33mBadge[39m[33m&gt;[39m
+ [90m 339 |[39m                     [33m&lt;[39m[33m/[39m[33mdiv[39m[33m&gt;[39m[0m
+Next.js build worker exited with code: 1 and signal: null
+
+```
+</details>
+</tool-use>
+
+---
+
+The `Badge` component doesn't accept `"default"` variant. Let me check the valid variants:
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="grep">
+<details>
+<summary>Tool use: **grep** • Grep for "variant.*Badge|Badge.*variant" in "/Users/bharath.s/zuper-internal-admin/components/ui/Badge.tsx" • 2 matches</summary>
+
+Output mode: content
+
+
+| File | Content | Line |
+|------|------|------|
+| `components/ui/Badge.tsx` | `export function Badge(\{ variant, children, className \}: BadgeProps) \{` | L20 |
+| `components/ui/Badge.tsx` | `return <Badge variant=\{config.variant\}>\{config.label\}</Badge>;` | L49 |
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="grep">
+<details>
+<summary>Tool use: **grep** • Grep for "variantStyles"" in "/Users/bharath.s/zuper-internal-admin/components/ui/Badge.tsx" • 0 matches</summary>
+
+Output mode: content
+
+
+_No matches found_
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="grep">
+<details>
+<summary>Tool use: **grep** • Grep for "variantStyles"" in "/Users/bharath.s/zuper-internal-admin/components/ui/Badge.tsx" • 0 matches</summary>
+
+Output mode: content
+
+
+_No matches found_
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="grep">
+<details>
+<summary>Tool use: **grep** • Grep for "variantStyles" in "/Users/bharath.s/zuper-internal-admin/components/ui/Badge.tsx" • 2 matches</summary>
+
+Output mode: content
+
+
+| File | Content | Line |
+|------|------|------|
+| `components/ui/Badge.tsx` | `const variantStyles = \{` | L11 |
+| `components/ui/Badge.tsx` | `variantStyles[variant],` | L25 |
+
+
+</details>
+</tool-use>
+
+---
+
+Valid variants are: `success`, `warning`, `error`, `info`, `neutral`, `premium`. I need to use `"neutral"` instead of `"default"`:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -334,5 +334,5 @@
+                      &lt;p className="text-sm font-medium text-gray-500 mb-1"&gt;Plan&lt;/p&gt;
+                      &lt;div className="flex items-center gap-2"&gt;
+-                       &lt;Badge variant={subscription.planType.startsWith("roofing_") ? "premium" : "default"}&gt;
++                       &lt;Badge variant={subscription.planType.startsWith("roofing_") ? "premium" : "info"}&gt;
+                          {licenseTypeLabels[subscription.planType] || subscription.planType}
+                        &lt;/Badge&gt;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd /Users/bharath.s/zuper-internal-admin && npx next build 2>&1 | tail -15</summary>
+
+```bash
+cd /Users/bharath.s/zuper-internal-admin && npx next build 2>&1 | tail -15
+```
+
+```
+ ✓ Generating static pages using 7 workers (9/9) in 258.4ms
+   Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /questbook
+├ ○ /settings/proposal-templates
+├ ○ /settings/proposal-templates/addons/new
+├ ○ /settings/proposal-templates/service-packages/edit
+└ ○ /settings/proposal-templates/service-packages/new
+
+
+○  (Static)  prerendered as static content
+
+
+```
+</details>
+</tool-use>
+
+---
+
+Build passes. Let me push:
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd /Users/bharath.s/zuper-internal-admin && git add -A && git commit -m "Update Subscription details page: plan type badge, grouped addons with descriptions, Included label for Roofing Platform Features, Zuper Pay discount note" && git push</summary>
+
+```bash
+cd /Users/bharath.s/zuper-internal-admin && git add -A && git commit -m "Update Subscription details page: plan type badge, grouped addons with descriptions, Included label for Roofing Platform Features, Zuper Pay discount note" && git push
+```
+
+```
+[main 9aa8be6] Update Subscription details page: plan type badge, grouped addons with descriptions, Included label for Roofing Platform Features, Zuper Pay discount note
+ 2 files changed, 1149 insertions(+), 42 deletions(-)
+To github.com:bharathsparky/zuper-internal.git
+   2405fe2..9aa8be6  main -&gt; main
+
+```
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="task" data-tool-name="todo_write">
+<details><summary>Tool use: **todo_write** • Todo List</summary>
+
+- [x] Update Plan Information section with plan type + Zuper Pay note
+- [x] Add group field to mock addons & group display in details
+- [x] Show 'Included' for Roofing Platform Features instead of $0
+- [x] Build & push changes
+
+</details>
+</tool-use>
+
+---
+
+Done! Build passed and pushed to `origin/main` (commit `9aa8be6`). ✅
+
+Here's what was updated on the **details page** (`Subscription.tsx`):
+
+1. **Plan Information section** — now shows the plan type as a badge (e.g. "Roofing Premium" in a premium-styled badge, or "Non-Roofing Core" in a blue badge), plus the Zuper Pay $5 discount note for Core/Premium plans.
+
+2. **Add-ons section** — now grouped by category (**Seats**, **Zuper Connect**, **Zuper Fleet**, **Platform Features**) with group headers and descriptions for each add-on.
+
+3. **Platform Features** — show as **"Included"** with a green background for Roofing plans instead of displaying `$0.00/mo`.
+
+---
+
+_**User (2026-02-17 07:58Z)**_
+
+DOM Path: div.min-h-.creen bg-gray-100 flex flex-col > main.flex-1 relative -mt-6 > div.mx-auto max-w-[1400px] w-full px-6 lg:px-12 pb-8 > div.flex gap-5 item.-.tart > div.flex-1 min-w-0 > div.pace-y-6 > div.bg-white rounded-xl border border-gray-200 .hadow-.m > div.p-6 > div.pace-y-6 > div.bg-gray-50 rounded-xl p-5[0] > div.grid grid-col.-2 lg:grid-col.-4 gap-6 > div[0] > div.flex item.-center gap-2
+Position: top=346px, left=395px, width=211px, height=28px
+React Component: Subscription
+HTML Element: <div class="flex items-center gap-2" data-cursor-element-id="cursor-el-1">ROOFING PREMIUM</div> shoudl we mentione plan here? 
+
+---
+
+_**Agent (model claude-4.6-opus-high-thinking, mode Agent)**_
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -332,5 +332,5 @@
+                  &lt;div className="grid grid-cols-2 lg:grid-cols-4 gap-6"&gt;
+                    &lt;div&gt;
+-                     &lt;p className="text-sm font-medium text-gray-500 mb-1"&gt;Plan&lt;/p&gt;
++                     &lt;p className="text-sm font-medium text-gray-500 mb-1"&gt;Plan Name&lt;/p&gt;
+                      &lt;div className="flex items-center gap-2"&gt;
+                        &lt;Badge variant={subscription.planType.startsWith("roofing_") ? "premium" : "info"}&gt;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Updated the label from "Plan" to "Plan Name" so it's clearer what the badge represents.
+
+---
+
+_**User (2026-02-17 07:58Z)**_
+
+i mean there can be multiple plans right do we even need to show plan name here can we remove this so can show it in table itself?
+
+---
+
+_**Agent (model claude-4.6-opus-high-thinking, mode Agent)**_
+
+
+
+
+
+---
+
+<think><details><summary>Thought Process</summary>
+The user is saying that since a customer can have multiple plan types (e.g., Roofing Premium + Roofing Core licenses), showing a single "Plan Name" in the Plan Information section doesn't make sense. They want to remove it from the Plan Information header and instead show the plan types in the licenses table below (which already shows them in the "Type" column).</details></think>
+
+---
+
+Good point — since a customer can have multiple plan types (like Roofing Premium + Roofing Core), a single "Plan Name" field doesn't make sense. Let me remove it from the Plan Information section — the plan types are already visible in the Plan table below.
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 9
+
+```diff
+@@ -330,13 +330,5 @@
+                &lt;div className="bg-gray-50 rounded-xl p-5"&gt;
+                  &lt;h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4"&gt;Plan Information&lt;/h3&gt;
+-                 &lt;div className="grid grid-cols-2 lg:grid-cols-4 gap-6"&gt;
+-                   &lt;div&gt;
+-                     &lt;p className="text-sm font-medium text-gray-500 mb-1"&gt;Plan Name&lt;/p&gt;
+-                     &lt;div className="flex items-center gap-2"&gt;
+-                       &lt;Badge variant={subscription.planType.startsWith("roofing_") ? "premium" : "info"}&gt;
+-                         {licenseTypeLabels[subscription.planType] || subscription.planType}
+-                       &lt;/Badge&gt;
+-                     &lt;/div&gt;
+-                   &lt;/div&gt;
++                 &lt;div className="grid grid-cols-2 lg:grid-cols-3 gap-6"&gt;
+                    &lt;div&gt;
+                      &lt;p className="text-sm font-medium text-gray-500 mb-1"&gt;Billing Cycle&lt;/p&gt;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Removed the "Plan Name" field. The grid is now 3 columns (Billing Cycle, Next Billing Date, Subscription Status), and the plan types are already shown in the Plan table rows (Roofing Premium, Roofing Core, etc.).
+
+---
+
+_**User (2026-02-17 07:58Z)**_
+
+DOM Path: div.min-h-.creen bg-gray-100 flex flex-col > main.flex-1 relative -mt-6 > div.mx-auto max-w-[1400px] w-full px-6 lg:px-12 pb-8 > div.flex gap-5 item.-.tart > div.flex-1 min-w-0 > div.pace-y-6 > div.bg-white rounded-xl border border-gray-200 .hadow-.m > div.p-6 > div.pace-y-6 > div.bg-gray-50 rounded-xl p-5[0] > p.mt-3 text-x. text-green-600
+Position: top=384px, left=395px, width=914px, height=16px
+React Component: Subscription
+HTML Element: <p class="mt-3 text-xs text-green-600" data-cursor-element-id="cursor-el-174">✓ Core & Premium plans receive a $5/license discount with Zuper Pay.</p> i think we dont need to show this since its for internal users
+
+---
+
+_**Agent (model claude-4.6-opus-high-thinking, mode Agent)**_
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: undefined, lines removed: 5
+
+```diff
+@@ -346,9 +346,4 @@
+                    &lt;/div&gt;
+                  &lt;/div&gt;
+-                 {(subscription.planType.includes("core") || subscription.planType.includes("premium")) &amp;&amp; (
+-                   &lt;p className="mt-3 text-xs text-green-600"&gt;
+-                     ✓ Core &amp; Premium plans receive a $5/license discount with Zuper Pay.
+-                   &lt;/p&gt;
+-                 )}
+                &lt;/div&gt;
+  
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Removed the Zuper Pay discount note from the details page.
+
+---
+
+_**User (2026-02-17 07:58Z)**_
+
+user can only buy one plan, they cant buy roofing premium or roofing core at the same time, only one plan can be active 
+
+---
+
+_**Agent (model claude-4.6-opus-high-thinking, mode Agent)**_
+
+
+
+
+
+---
+
+<think><details><summary>Thought Process</summary>
+The user is clarifying that a customer can only have ONE plan at a time - not multiple. So the licenses table shouldn't show multiple plan types. Instead, there should be just one plan with a quantity of seats.
+
+This changes the model:
+- One plan type selected (e.g., "Roofing Premium")
+- Number of admin seats on that plan
+- Add-ons on top
+
+So I need to update:
+1. **Subscription.tsx** - Mock data should have only one license/plan type, and the display should reflect a single plan
+2. **CreateSubscriptionModal.tsx** - Should only allow selecting one plan type (not multiple license types with "Add Plan Type" button)
+
+
+3. **EditSubscriptionModal.tsx** - Same constraint, only one plan type allowed
+
+Since there's only one plan per customer, I can simplify the display from a multi-row table to a single plan view showing the plan name, seat count, per-seat price, any discounts, and total cost. The Create and Edit modals should let users pick one plan from a dropdown and then configure the seat quantity and pricing for that single selection.</details></think>
+
+---
+
+Got it — one plan per customer. I need to update all three files to enforce a single plan selection instead of multiple license types.
+
+---
+
+<tool-use data-tool-type="task" data-tool-name="todo_write">
+<details><summary>Tool use: **todo_write** • Todo List</summary>
+
+- [-] Subscription.tsx - single plan in mock data & display
+- [ ] CreateSubscriptionModal - remove multi-plan, single plan only
+- [ ] EditSubscriptionModal - remove multi-plan, single plan only
+- [ ] Build & push
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+Now I have the full picture. I need to:
+
+1. **Subscription.tsx** — Change mock data to single plan/license, simplify the Plan section display (no multi-row table), show plan name in the collapsible header
+2. **CreateSubscriptionModal.tsx** — Remove "Add Plan Type" button, single plan with quantity/price config
+3. **EditSubscriptionModal.tsx** — Same, single plan only
+
+Let me start:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: 9, lines removed: 20
+
+```diff
+@@ -33,24 +33,13 @@
+    nextBillingDate: "2024-12-15",
+    status: "active" as const,
+-   licenses: [
+-     {
+-       id: "1",
+-       type: "roofing_premium",
+-       purchased: 10,
+-       active: 8,
+-       pricePerLicense: 50,
+-       discountType: "percentage" as "none" | "fixed" | "percentage",
+-       discountValue: 10,
+-     },
+-     {
+-       id: "2",
+-       type: "roofing_core",
+-       purchased: 5,
+-       active: 4,
+-       pricePerLicense: 30,
+-       discountType: "none" as "none" | "fixed" | "percentage",
+-       discountValue: 0,
+-     },
+-   ],
++   license: {
++     id: "1",
++     type: "roofing_premium",
++     purchased: 10,
++     active: 8,
++     pricePerLicense: 50,
++     discountType: "percentage" as "none" | "fixed" | "percentage",
++     discountValue: 10,
++   },
+    nonBillableLicenses: [
+      {
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update all references from `subscription.licenses` to `subscription.license` throughout the file. Let me update the totals calculation:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: 3, lines removed: 7
+
+```diff
+@@ -166,11 +166,7 @@
+  
+    // Calculate totals with discounts
+-   const licensesTotal = subscription.licenses.reduce(
+-     (sum, lic) =&gt; {
+-       const discountedPrice = calculateDiscountedPrice(lic.pricePerLicense, lic.discountType || "none", lic.discountValue || 0);
+-       return sum + lic.purchased * discountedPrice;
+-     },
+-     0
+-   );
++   const lic = subscription.license;
++   const licDiscountedPrice = calculateDiscountedPrice(lic.pricePerLicense, lic.discountType || "none", lic.discountValue || 0);
++   const licensesTotal = lic.purchased * licDiscountedPrice;
+    const addonsTotal = subscription.addons.reduce((sum, addon) =&gt; {
+      const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType || "none", addon.discountValue || 0);
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the editModalData to pass a single license as an array (for backward compat with the edit modal interface):
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+Status: **loading**
+
+</details>
+
+</tool-use>
+
+---
+
 
 
 ---

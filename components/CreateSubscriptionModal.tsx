@@ -1,16 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { X, Plus, Trash2, Minus, ChevronDown } from "lucide-react";
+import { X, Plus, Minus, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { formatCurrency } from "@/lib/utils";
-
-interface License {
-  id: string;
-  type: string;
-  quantity: number;
-  pricePerLicense: number;
-}
 
 interface CreateSubscriptionModalProps {
   isOpen: boolean;
@@ -49,9 +42,8 @@ export default function CreateSubscriptionModal({
 }: CreateSubscriptionModalProps) {
   const [plan, setPlan] = useState("roofing_premium");
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annually">("monthly");
-  const [licenses, setLicenses] = useState<License[]>([
-    { id: "1", type: "roofing_premium", quantity: 10, pricePerLicense: 50 },
-  ]);
+  const [quantity, setQuantity] = useState(10);
+  const [pricePerSeat, setPricePerSeat] = useState(50);
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
   const [trialPeriod, setTrialPeriod] = useState<string>("none");
   const [customTrialDate, setCustomTrialDate] = useState("");
@@ -59,39 +51,11 @@ export default function CreateSubscriptionModal({
 
   if (!isOpen) return null;
 
-  const updateLicenseQuantity = (id: string, delta: number) => {
-    setLicenses((prev) =>
-      prev.map((lic) =>
-        lic.id === id
-          ? { ...lic, quantity: Math.max(0, lic.quantity + delta) }
-          : lic
-      )
-    );
-  };
-
-  const updateLicensePrice = (id: string, price: number) => {
-    setLicenses((prev) =>
-      prev.map((lic) => (lic.id === id ? { ...lic, pricePerLicense: price } : lic))
-    );
-  };
-
-  const removeLicense = (id: string) => {
-    setLicenses((prev) => prev.filter((lic) => lic.id !== id));
-  };
-
-  const addLicense = () => {
-    const usedTypes = licenses.map((l) => l.type);
-    const availableType = licenseTypes.find((t) => !usedTypes.includes(t.value));
-    if (availableType) {
-      setLicenses((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          type: availableType.value,
-          quantity: 1,
-          pricePerLicense: availableType.defaultPrice,
-        },
-      ]);
+  const handlePlanChange = (newPlan: string) => {
+    setPlan(newPlan);
+    const planDef = licenseTypes.find((t) => t.value === newPlan);
+    if (planDef) {
+      setPricePerSeat(planDef.defaultPrice);
     }
   };
 
@@ -104,10 +68,7 @@ export default function CreateSubscriptionModal({
   };
 
   // Calculate totals
-  const licensesTotal = licenses.reduce(
-    (sum, lic) => sum + lic.quantity * lic.pricePerLicense,
-    0
-  );
+  const licensesTotal = quantity * pricePerSeat;
   const addonsTotal = addons
     .filter((a) => selectedAddons.includes(a.id))
     .reduce((sum, a) => sum + a.price, 0);
@@ -121,7 +82,7 @@ export default function CreateSubscriptionModal({
     onClose();
   };
 
-  const getLicenseLabel = (type: string) => {
+  const getPlanLabel = (type: string) => {
     return licenseTypes.find((t) => t.value === type)?.label || type;
   };
 
@@ -163,7 +124,7 @@ export default function CreateSubscriptionModal({
                 <div className="relative">
                   <select
                     value={plan}
-                    onChange={(e) => setPlan(e.target.value)}
+                    onChange={(e) => handlePlanChange(e.target.value)}
                     className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <optgroup label="Roofing Plans">
@@ -218,103 +179,64 @@ export default function CreateSubscriptionModal({
 
           {/* Plan Configuration */}
           <section>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
-                Plan Configuration
-              </h3>
-              <button
-                onClick={addLicense}
-                disabled={licenses.length >= licenseTypes.length}
-                className="flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 disabled:text-gray-400 disabled:cursor-not-allowed"
-              >
-                <Plus className="w-4 h-4" />
-                Add Plan Type
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {licenses.map((license) => (
-                <div
-                  key={license.id}
-                  className="p-4 bg-gray-50 rounded-lg border border-gray-200"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <h4 className="text-sm font-medium text-gray-900">
-                      {getLicenseLabel(license.type)}
-                    </h4>
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">
+              Plan Configuration
+            </h3>
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <h4 className="text-sm font-medium text-gray-900 mb-3">
+                {getPlanLabel(plan)}
+              </h4>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    Seats
+                  </label>
+                  <div className="flex items-center">
                     <button
-                      onClick={() => removeLicense(license.id)}
-                      className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="p-2 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-50"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Minus className="w-4 h-4 text-gray-600" />
+                    </button>
+                    <input
+                      type="number"
+                      value={quantity}
+                      onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-16 text-center py-2 border-y border-gray-300 text-sm focus:outline-none"
+                    />
+                    <button
+                      onClick={() => setQuantity(quantity + 1)}
+                      className="p-2 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-50"
+                    >
+                      <Plus className="w-4 h-4 text-gray-600" />
                     </button>
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">
-                        Quantity
-                      </label>
-                      <div className="flex items-center">
-                        <button
-                          onClick={() => updateLicenseQuantity(license.id, -1)}
-                          className="p-2 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-50"
-                        >
-                          <Minus className="w-4 h-4 text-gray-600" />
-                        </button>
-                        <input
-                          type="number"
-                          value={license.quantity}
-                          onChange={(e) =>
-                            setLicenses((prev) =>
-                              prev.map((l) =>
-                                l.id === license.id
-                                  ? { ...l, quantity: parseInt(e.target.value) || 0 }
-                                  : l
-                              )
-                            )
-                          }
-                          className="w-16 text-center py-2 border-y border-gray-300 text-sm focus:outline-none"
-                        />
-                        <button
-                          onClick={() => updateLicenseQuantity(license.id, 1)}
-                          className="p-2 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-50"
-                        >
-                          <Plus className="w-4 h-4 text-gray-600" />
-                        </button>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">
-                        Price/License
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                          $
-                        </span>
-                        <input
-                          type="number"
-                          value={license.pricePerLicense}
-                          onChange={(e) =>
-                            updateLicensePrice(
-                              license.id,
-                              parseFloat(e.target.value) || 0
-                            )
-                          }
-                          className="w-full pl-7 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">
-                        Subtotal
-                      </label>
-                      <p className="py-2 text-sm font-semibold text-gray-900">
-                        {formatCurrency(license.quantity * license.pricePerLicense)}
-                      </p>
-                    </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    Price/Seat
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                      $
+                    </span>
+                    <input
+                      type="number"
+                      value={pricePerSeat}
+                      onChange={(e) => setPricePerSeat(parseFloat(e.target.value) || 0)}
+                      className="w-full pl-7 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
                   </div>
                 </div>
-              ))}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    Subtotal
+                  </label>
+                  <p className="py-2 text-sm font-semibold text-gray-900">
+                    {formatCurrency(quantity * pricePerSeat)}
+                  </p>
+                </div>
+              </div>
             </div>
           </section>
 
