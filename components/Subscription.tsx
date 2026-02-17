@@ -347,6 +347,7 @@ export default function Subscription() {
                           <Users className="w-4 h-4 text-blue-600" />
                         </div>
                         <div className="text-left">
+                          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest leading-none mb-1">Plan</p>
                           <h3 className="text-sm font-semibold text-gray-900">
                             {licenseTypeLabels[license.type] || license.type}
                           </h3>
