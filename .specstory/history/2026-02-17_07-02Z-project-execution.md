@@ -7458,6 +7458,946 @@ Lines added: 15, lines removed: 3
 
 ---
 
+Also update the edit modal data to pass quantity:
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: undefined
+
+```diff
+@@ -194,4 +194,5 @@
+      addons: subscription.addons.map((a) =&gt; ({
+        id: a.id,
++       quantity: a.quantity || 1,
+        discountType: (a.discountType || "none") as "none" | "fixed" | "percentage",
+        discountValue: a.discountValue || 0,
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="task" data-tool-name="todo_write">
+<details><summary>Tool use: **todo_write** • Todo List</summary>
+
+- [x] Add quantity field to addon mock data in Subscription.tsx
+- [x] Show qty in details page addon listing
+- [x] Update addon total calc to use qty
+- [-] Add qty support in Create & Edit modals
+- [ ] Build & push
+
+</details>
+</tool-use>
+
+---
+
+Now update the **CreateSubscriptionModal** — add quantity controls for add-ons:
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+Now let me see the add-ons section in the Create modal:
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+I need to add quantity state for add-ons in the Create modal and show quantity controls when an addon is selected. Let me update:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: undefined
+
+```diff
+@@ -46,4 +46,5 @@
+    const [pricePerSeat, setPricePerSeat] = useState(50);
+    const [selectedAddons, setSelectedAddons] = useState&lt;string[]&gt;([]);
++   const [addonQuantities, setAddonQuantities] = useState&lt;Record&lt;string, number&gt;&gt;({});
+    const [trialPeriod, setTrialPeriod] = useState&lt;string&gt;("none");
+    const [customTrialDate, setCustomTrialDate] = useState("");
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Update the toggleAddon to initialize quantity:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 14, lines removed: 5
+
+```diff
+@@ -62,9 +62,18 @@
+  
+    const toggleAddon = (addonId: string) =&gt; {
+-     setSelectedAddons((prev) =&gt;
+-       prev.includes(addonId)
+-         ? prev.filter((id) =&gt; id !== addonId)
+-         : [...prev, addonId]
+-     );
++     setSelectedAddons((prev) =&gt; {
++       if (prev.includes(addonId)) {
++         return prev.filter((id) =&gt; id !== addonId);
++       } else {
++         if (!addonQuantities[addonId]) {
++           setAddonQuantities((q) =&gt; ({ ...q, [addonId]: 1 }));
++         }
++         return [...prev, addonId];
++       }
++     });
++   };
++ 
++   const updateAddonQuantity = (addonId: string, qty: number) =&gt; {
++     setAddonQuantities((prev) =&gt; ({ ...prev, [addonId]: Math.max(1, qty) }));
+    };
+  
+```
+
+**Chunk 2**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -73,5 +82,5 @@
+    const addonsTotal = addons
+      .filter((a) =&gt; selectedAddons.includes(a.id))
+-     .reduce((sum, a) =&gt; sum + a.price, 0);
++     .reduce((sum, a) =&gt; sum + a.price * (addonQuantities[a.id] || 1), 0);
+    const grandTotal = licensesTotal + addonsTotal;
+  
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the addon list UI to show quantity controls when selected:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 58, lines removed: 24
+
+```diff
+@@ -271,36 +271,70 @@
+                        {addons.filter(a =&gt; a.group === group).map((addon) =&gt; {
+                          const isIncluded = group === "Platform Features" &amp;&amp; plan.startsWith("roofing_");
++                         const isSelected = selectedAddons.includes(addon.id);
++                         const qty = addonQuantities[addon.id] || 1;
+                          return (
+-                           &lt;label
++                           &lt;div
+                              key={addon.id}
+-                             className={&#96;flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
++                             className={&#96;rounded-lg border transition-colors ${
+                                isIncluded
+                                  ? "bg-green-50 border-green-200"
+-                                 : selectedAddons.includes(addon.id)
++                                 : isSelected
+                                  ? "bg-blue-50 border-blue-200"
+                                  : "bg-gray-50 border-gray-200 hover:border-blue-300"
+                              }&#96;}
+                            &gt;
+-                             &lt;div className="flex items-center gap-3"&gt;
+-                               &lt;input
+-                                 type="checkbox"
+-                                 checked={isIncluded || selectedAddons.includes(addon.id)}
+-                                 onChange={() =&gt; !isIncluded &amp;&amp; toggleAddon(addon.id)}
+-                                 disabled={isIncluded}
+-                                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50"
+-                               /&gt;
+-                               &lt;div&gt;
+-                                 &lt;span className="text-sm text-gray-900"&gt;{addon.name}&lt;/span&gt;
+-                                 &lt;p className="text-xs text-gray-500"&gt;{addon.description}&lt;/p&gt;
+-                               &lt;/div&gt;
+-                             &lt;/div&gt;
+-                             &lt;span className="text-sm text-gray-600 flex-shrink-0 ml-4"&gt;
+-                               {isIncluded ? (
+-                                 &lt;span className="text-green-600 font-medium"&gt;Included&lt;/span&gt;
+-                               ) : (
+-                                 &lt;&gt;{formatCurrency(addon.price)}/mo&lt;/&gt;
+-                               )}
+-                             &lt;/span&gt;
+-                           &lt;/label&gt;
++                             &lt;label className="flex items-center justify-between p-3 cursor-pointer"&gt;
++                               &lt;div className="flex items-center gap-3"&gt;
++                                 &lt;input
++                                   type="checkbox"
++                                   checked={isIncluded || isSelected}
++                                   onChange={() =&gt; !isIncluded &amp;&amp; toggleAddon(addon.id)}
++                                   disabled={isIncluded}
++                                   className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50"
++                                 /&gt;
++                                 &lt;div&gt;
++                                   &lt;span className="text-sm text-gray-900"&gt;{addon.name}&lt;/span&gt;
++                                   &lt;p className="text-xs text-gray-500"&gt;{addon.description}&lt;/p&gt;
++                                 &lt;/div&gt;
++                               &lt;/div&gt;
++                               &lt;span className="text-sm text-gray-600 flex-shrink-0 ml-4"&gt;
++                                 {isIncluded ? (
++                                   &lt;span className="text-green-600 font-medium"&gt;Included&lt;/span&gt;
++                                 ) : (
++                                   &lt;&gt;{formatCurrency(addon.price)}/mo{qty &gt; 1 ? " each" : ""}&lt;/&gt;
++                                 )}
++                               &lt;/span&gt;
++                             &lt;/label&gt;
++                             {isSelected &amp;&amp; !isIncluded &amp;&amp; (
++                               &lt;div className="px-3 pb-3 flex items-center justify-between" onClick={(e) =&gt; e.stopPropagation()}&gt;
++                                 &lt;div className="flex items-center gap-2 pl-7"&gt;
++                                   &lt;span className="text-xs font-medium text-gray-500"&gt;Qty:&lt;/span&gt;
++                                   &lt;div className="inline-flex items-center h-7 bg-white border border-gray-300 rounded-md overflow-hidden"&gt;
++                                     &lt;button
++                                       onClick={() =&gt; updateAddonQuantity(addon.id, qty - 1)}
++                                       className="w-7 h-full flex items-center justify-center hover:bg-gray-50"
++                                     &gt;
++                                       &lt;Minus className="w-3 h-3 text-gray-600" /&gt;
++                                     &lt;/button&gt;
++                                     &lt;input
++                                       type="number"
++                                       value={qty}
++                                       onChange={(e) =&gt; updateAddonQuantity(addon.id, parseInt(e.target.value) || 1)}
++                                       className="w-10 h-full text-center text-xs font-medium border-x border-gray-300 focus:outline-none [appearance:textfield] [&amp;::-webkit-outer-spin-button]:appearance-none [&amp;::-webkit-inner-spin-button]:appearance-none"
++                                     /&gt;
++                                     &lt;button
++                                       onClick={() =&gt; updateAddonQuantity(addon.id, qty + 1)}
++                                       className="w-7 h-full flex items-center justify-center hover:bg-gray-50"
++                                     &gt;
++                                       &lt;Plus className="w-3 h-3 text-gray-600" /&gt;
++                                     &lt;/button&gt;
++                                   &lt;/div&gt;
++                                 &lt;/div&gt;
++                                 &lt;span className="text-sm font-medium text-gray-900"&gt;
++                                   {formatCurrency(addon.price * qty)}/mo
++                                 &lt;/span&gt;
++                               &lt;/div&gt;
++                             )}
++                           &lt;/div&gt;
+                          );
+                        })}
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the **EditSubscriptionModal** to add quantity support. Let me check the current addon interface:
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+Add `quantity` to the `AddonWithDiscount` interface and add quantity state:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: undefined
+
+```diff
+@@ -29,4 +29,5 @@
+  interface AddonWithDiscount {
+    id: string;
++   quantity?: number;
+    discountType: "none" | "fixed" | "percentage";
+    discountValue: number;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now add `addonQuantities` state and initialize from current subscription:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 6, lines removed: undefined
+
+```diff
+@@ -110,4 +110,10 @@
+      currentSubscription.addons.map(a =&gt; a.id)
+    );
++   const [addonQuantities, setAddonQuantities] = useState&lt;Record&lt;string, number&gt;&gt;(
++     currentSubscription.addons.reduce((acc, addon) =&gt; ({
++       ...acc,
++       [addon.id]: addon.quantity || 1
++     }), {} as Record&lt;string, number&gt;)
++   );
+    const [oneTimeChargeDiscounts, setOneTimeChargeDiscounts] = useState&lt;Record&lt;string, { discountType: "none" | "fixed" | "percentage"; discountValue: number }&gt;&gt;(
+      (currentSubscription.oneTimeCharges || []).reduce((acc, charge) =&gt; ({
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Update the useEffect to reset addonQuantities:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 4, lines removed: undefined
+
+```diff
+@@ -136,4 +136,8 @@
+        setDiscountValue(lic?.discountValue || 0);
+        setSelectedAddons(currentSubscription.addons.map(a =&gt; a.id));
++       setAddonQuantities(currentSubscription.addons.reduce((acc, addon) =&gt; ({
++         ...acc,
++         [addon.id]: addon.quantity || 1
++       }), {} as Record&lt;string, number&gt;));
+        setAddonDiscounts(currentSubscription.addons.reduce((acc, addon) =&gt; ({
+          ...acc,
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the toggleAddon to initialize quantity:
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -175,5 +175,5 @@
+          return prev.filter((id) =&gt; id !== addonId);
+        } else {
+-         // Initialize discount state for new addon
++         // Initialize discount &amp; quantity state for new addon
+          if (!addonDiscounts[addonId]) {
+            setAddonDiscounts(prevDiscounts =&gt; ({
+```
+
+**Chunk 2**
+Lines added: 7, lines removed: undefined
+
+```diff
+@@ -182,8 +182,15 @@
+            }));
+          }
++         if (!addonQuantities[addonId]) {
++           setAddonQuantities(prevQty =&gt; ({ ...prevQty, [addonId]: 1 }));
++         }
+          return [...prev, addonId];
+        }
+      });
+    };
++ 
++   const updateAddonQuantity = (addonId: string, qty: number) =&gt; {
++     setAddonQuantities((prev) =&gt; ({ ...prev, [addonId]: Math.max(1, qty) }));
++   };
+  
+    const updateAddonDiscount = (addonId: string, discountType: "none" | "fixed" | "percentage", discountValue: number) =&gt; {
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the addon total calculation in EditSubscriptionModal to use quantities:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -240,5 +240,5 @@
+    const addonsTotal = availableAddons
+      .filter((a) =&gt; selectedAddons.includes(a.id))
+-     .reduce((sum, a) =&gt; sum + calculateAddonDiscountedPrice(a), 0);
++     .reduce((sum, a) =&gt; sum + calculateAddonDiscountedPrice(a) * (addonQuantities[a.id] || 1), 0);
+    const grandTotal = licensesTotal + addonsTotal;
+  
+```
+
+**Chunk 2**
+Lines added: 4, lines removed: 1
+
+```diff
+@@ -247,5 +247,8 @@
+    const prevAddonsTotal = availableAddons
+      .filter((a) =&gt; currentSubscription.addons.some(addon =&gt; addon.id === a.id))
+-     .reduce((sum, a) =&gt; sum + a.price, 0);
++     .reduce((sum, a) =&gt; {
++       const prevAddon = currentSubscription.addons.find(addon =&gt; addon.id === a.id);
++       return sum + a.price * (prevAddon?.quantity || 1);
++     }, 0);
+    const prevGrandTotal = prevLicensesTotal + prevAddonsTotal;
+    const totalDifference = grandTotal - prevGrandTotal;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the addon list UI in the Edit modal to show quantity controls. Let me find the addon row rendering:
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="codebase_search">
+<details>
+                <summary>Tool use: **codebase_search** • Searched codebase "Where is the addon row rendered with discount controls in EditSubscriptionModal?" • **2** results</summary>
+            
+| File | Lines |
+|------|-------|
+| `components/EditSubscriptionModal.tsx` | L85-1047 |
+| `components/EditSubscriptionModal.tsx` | L83-1047 |
+
+</details>
+</tool-use>
+
+---
+
+Let me read the exact section around line 808-860:
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+Now I need to also check where `discountedPrice` and the price display is in the addon row. Let me see lines ~740-810:
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+I need to add `qty` variable and update the price display to show line total, and add a quantity control row. Let me replace the addon row:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 2, lines removed: undefined
+
+```diff
+@@ -749,4 +749,6 @@
+                          const hasDiscount = discount.discountType !== "none" &amp;&amp; discount.discountValue &gt; 0;
+                          const discountedPrice = calculateAddonDiscountedPrice(addon);
++                         const qty = addonQuantities[addon.id] || 1;
++                         const lineTotal = discountedPrice * qty;
+  
+                          return (
+```
+
+**Chunk 2**
+Lines added: 34, lines removed: 5
+
+```diff
+@@ -798,16 +800,45 @@
+                                  ) : hasDiscount ? (
+                                    &lt;div className="flex flex-col items-end"&gt;
+-                                     &lt;span className="text-xs text-gray-400 line-through"&gt;{formatCurrency(addon.price)}/mo&lt;/span&gt;
+-                                     &lt;span className="text-sm font-semibold text-green-600"&gt;{formatCurrency(discountedPrice)}/mo&lt;/span&gt;
++                                     &lt;span className="text-xs text-gray-400 line-through"&gt;{formatCurrency(addon.price * qty)}/mo&lt;/span&gt;
++                                     &lt;span className="text-sm font-semibold text-green-600"&gt;{formatCurrency(lineTotal)}/mo&lt;/span&gt;
++                                     {qty &gt; 1 &amp;&amp; &lt;span className="text-xs text-gray-400"&gt;{formatCurrency(discountedPrice)} each&lt;/span&gt;}
+                                    &lt;/div&gt;
+                                  ) : (
+-                                   &lt;span className="text-sm font-semibold text-gray-900"&gt;{formatCurrency(addon.price)}/mo&lt;/span&gt;
++                                   &lt;div className="flex flex-col items-end"&gt;
++                                     &lt;span className="text-sm font-semibold text-gray-900"&gt;{formatCurrency(lineTotal)}/mo&lt;/span&gt;
++                                     {qty &gt; 1 &amp;&amp; &lt;span className="text-xs text-gray-400"&gt;{formatCurrency(addon.price)} each&lt;/span&gt;}
++                                   &lt;/div&gt;
+                                  )}
+                                &lt;/div&gt;
+                              &lt;/div&gt;
+                              
+-                             {/* Discount controls for selected addons (not for included) */}
++                             {/* Quantity &amp; Discount controls for selected addons (not for included) */}
+                              {isSelected &amp;&amp; !isIncluded &amp;&amp; (
+-                               &lt;div className="px-5 pb-3" onClick={(e) =&gt; e.stopPropagation()}&gt;
++                               &lt;div className="px-5 pb-3 space-y-2" onClick={(e) =&gt; e.stopPropagation()}&gt;
++                                 {/* Quantity */}
++                                 &lt;div className="flex items-center gap-2 pl-8"&gt;
++                                   &lt;span className="text-xs font-medium text-gray-500"&gt;Qty:&lt;/span&gt;
++                                   &lt;div className="inline-flex items-center h-7 bg-white border border-gray-300 rounded-md overflow-hidden"&gt;
++                                     &lt;button
++                                       onClick={() =&gt; updateAddonQuantity(addon.id, qty - 1)}
++                                       className="w-7 h-full flex items-center justify-center hover:bg-gray-50"
++                                     &gt;
++                                       &lt;Minus className="w-3 h-3 text-gray-600" /&gt;
++                                     &lt;/button&gt;
++                                     &lt;input
++                                       type="number"
++                                       value={qty}
++                                       onChange={(e) =&gt; updateAddonQuantity(addon.id, parseInt(e.target.value) || 1)}
++                                       className="w-10 h-full text-center text-xs font-medium border-x border-gray-300 focus:outline-none [appearance:textfield] [&amp;::-webkit-outer-spin-button]:appearance-none [&amp;::-webkit-inner-spin-button]:appearance-none"
++                                     /&gt;
++                                     &lt;button
++                                       onClick={() =&gt; updateAddonQuantity(addon.id, qty + 1)}
++                                       className="w-7 h-full flex items-center justify-center hover:bg-gray-50"
++                                     &gt;
++                                       &lt;Plus className="w-3 h-3 text-gray-600" /&gt;
++                                     &lt;/button&gt;
++                                   &lt;/div&gt;
++                                 &lt;/div&gt;
++                                 {/* Discount */}
+                                  &lt;div className="flex items-center gap-2 pl-8"&gt;
+                                    &lt;span className="text-xs font-medium text-gray-500 flex items-center gap-1"&gt;
+```
+
+**Chunk 3**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -851,5 +882,5 @@
+                                    {hasDiscount &amp;&amp; (
+                                      &lt;span className="text-xs text-green-600 font-medium"&gt;
+-                                       Saving {formatCurrency(addon.price - discountedPrice)}/mo
++                                       Saving {formatCurrency((addon.price - discountedPrice) * qty)}/mo
+                                      &lt;/span&gt;
+                                    )}
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now let's check for lint errors and build:
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 3 files</summary>
+      
+Lint paths:
+
+- `/Users/bharath.s/zuper-internal-admin/components/Subscription.tsx`
+- `/Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx`
+- `/Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd /Users/bharath.s/zuper-internal-admin && npm run build 2>&1 | tail -25</summary>
+
+```bash
+cd /Users/bharath.s/zuper-internal-admin && npm run build 2>&1 | tail -25
+```
+
+```
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+   Generating static pages using 7 workers (0/9) ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+   Generating static pages using 7 workers (2/9) 
+   Generating static pages using 7 workers (4/9) 
+   Generating static pages using 7 workers (6/9) 
+ ✓ Generating static pages using 7 workers (9/9) in 277.7ms
+   Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /questbook
+├ ○ /settings/proposal-templates
+├ ○ /settings/proposal-templates/addons/new
+├ ○ /settings/proposal-templates/service-packages/edit
+└ ○ /settings/proposal-templates/service-packages/new
+
+
+○  (Static)  prerendered as static content
+
+
+```
+</details>
+</tool-use>
+
+---
+
+Build is clean. Let me push:
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd /Users/bharath.s/zuper-internal-admin && git add -A && git commit -m "Add quantity support for add-ons across details, create, and edit views" && git push</summary>
+
+```bash
+cd /Users/bharath.s/zuper-internal-admin && git add -A && git commit -m "Add quantity support for add-ons across details, create, and edit views" && git push
+```
+
+```
+[main d592418] Add quantity support for add-ons across details, create, and edit views
+ 4 files changed, 2095 insertions(+), 53 deletions(-)
+To github.com:bharathsparky/zuper-internal.git
+   f876522..d592418  main -&gt; main
+
+```
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="task" data-tool-name="todo_write">
+<details><summary>Tool use: **todo_write** • Todo List</summary>
+
+- [x] Add quantity field to addon mock data in Subscription.tsx
+- [x] Show qty in details page addon listing
+- [x] Update addon total calc to use qty
+- [x] Add qty support in Create & Edit modals
+- [x] Build & push
+
+</details>
+</tool-use>
+
+---
+
+Done! Here's what was added:
+
+**Quantity support for add-ons** — across all three views:
+
+1. **Details page (`Subscription.tsx`):**
+   - Each addon now has a `quantity` field in mock data (e.g. Basic Seat ×5, Fleet End-to-End ×3)
+   - Qty badge (`×5`) shows next to the addon name when quantity > 1
+   - Price column shows the **line total** (qty × unit price), with "each" price underneath
+   - Addon total calculation now multiplies by quantity
+
+2. **Create modal (`CreateSubscriptionModal.tsx`):**
+   - When an addon is selected, a **qty stepper** (−/input/+) appears below the checkbox
+   - Shows the line total (qty × price) on the right
+   - Billing summary accounts for quantities
+
+3. **Edit modal (`EditSubscriptionModal.tsx`):**
+   - Same qty stepper alongside the existing discount controls
+   - Price display shows line total with "each" price when qty > 1
+   - Savings display accounts for quantity (`Saving $X/mo` reflects qty × discount)
+   - Previous total calculation uses stored quantities for accurate diff
+
+---
+
+_**User (2026-02-17 07:58Z)**_
+
+i think only basic seat ( crew) will habe qty, remaining things are whole feature right? so it is not qty based.
+
+---
+
+_**Agent (model claude-4.6-opus-high-thinking, mode Agent)**_
+
+
+
+
+
+---
+
+<think><details><summary>Thought Process</summary>
+The user is clarifying that only "Basic Seat (Crew)" should have quantity support since it's a per-seat add-on. All other add-ons are feature-based (you either have them or you don't) — no quantity needed. Let me update all three files to only show quantity for Basic Seat.
+
+The approach:
+1. Remove quantity from all addon mock data except basic_seat
+2. In the details page, only show qty badge for addons that have quantity > 1
+3. In Create/Edit modals, only show qty controls for basic_seat (or more generically, for seat-type addons)
+
+Actually, the simplest approach is to keep the quantity field but only allow/show quantity controls for the "Seats" group or specifically for `basic_seat`. For other addons, quantity is always 1 and we don't show the qty UI.</details></think>
+
+---
+
+You're right — only Basic Seat (Crew) is quantity-based since it's per-user. The rest are features (on/off). Let me clean that up across all three files.
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: 6, lines removed: 6
+
+```diff
+@@ -58,10 +58,10 @@
+    addons: [
+      { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, quantity: 5, group: "Seats", description: "Login, time tracking, geo tracking, basic job view", discountType: "none" as const, discountValue: 0 },
+-     { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, quantity: 1, group: "Zuper Connect", description: "SMS/MMS telephony with call flows, recording, CRM sync", discountType: "none" as const, discountValue: 0 },
+-     { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, quantity: 3, group: "Zuper Fleet", description: "GPS tracking, AI safety cams, health monitoring", discountType: "none" as const, discountValue: 0 },
+-     { id: "customer_portal", name: "Customer Portal", price: 0, quantity: 1, group: "Platform Features", description: "Branded self-service portal for jobs, invoices, and requests", discountType: "none" as const, discountValue: 0 },
+-     { id: "report_builder", name: "Report Builder", price: 0, quantity: 1, group: "Platform Features", description: "Advanced reporting for custom dashboards and KPIs", discountType: "none" as const, discountValue: 0 },
+-     { id: "workflow_builder", name: "Workflow Builder", price: 0, quantity: 1, group: "Platform Features", description: "Visual automation for processes (up to 5,000 executions/mo)", discountType: "none" as const, discountValue: 0 },
+-     { id: "platform_maintenance", name: "Platform Maintenance Fee", price: 0, quantity: 1, group: "Platform Features", description: "Annual infrastructure, maintenance, and compliance", discountType: "none" as const, discountValue: 0 },
++     { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, group: "Zuper Connect", description: "SMS/MMS telephony with call flows, recording, CRM sync", discountType: "none" as const, discountValue: 0 },
++     { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, group: "Zuper Fleet", description: "GPS tracking, AI safety cams, health monitoring", discountType: "none" as const, discountValue: 0 },
++     { id: "customer_portal", name: "Customer Portal", price: 0, group: "Platform Features", description: "Branded self-service portal for jobs, invoices, and requests", discountType: "none" as const, discountValue: 0 },
++     { id: "report_builder", name: "Report Builder", price: 0, group: "Platform Features", description: "Advanced reporting for custom dashboards and KPIs", discountType: "none" as const, discountValue: 0 },
++     { id: "workflow_builder", name: "Workflow Builder", price: 0, group: "Platform Features", description: "Visual automation for processes (up to 5,000 executions/mo)", discountType: "none" as const, discountValue: 0 },
++     { id: "platform_maintenance", name: "Platform Maintenance Fee", price: 0, group: "Platform Features", description: "Annual infrastructure, maintenance, and compliance", discountType: "none" as const, discountValue: 0 },
+    ],
+    oneTimeCharges: [
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the details page addon listing — only show qty badge and "each" pricing for seat-type add-ons (those with `quantity` > 1):
+
+The current code already checks `qty > 1` for showing the badge and "each" text, and `addon.quantity || 1` will default to 1 for non-seat addons. So the details page display is actually fine already since only `basic_seat` has `quantity: 5`. The price calculation also works since `addon.quantity || 1` defaults to 1.
+
+Now let me update the **Create modal** — only show qty controls for seat-type add-ons:
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+I need to make the qty controls only show for seat-type add-ons (`group === "Seats"`). Replace that section:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 5, lines removed: 2
+
+```diff
+@@ -301,10 +301,13 @@
+                                  {isIncluded ? (
+                                    &lt;span className="text-green-600 font-medium"&gt;Included&lt;/span&gt;
++                                 ) : addon.group === "Seats" ? (
++                                   &lt;&gt;{formatCurrency(addon.price)}/mo each&lt;/&gt;
+                                  ) : (
+-                                   &lt;&gt;{formatCurrency(addon.price)}/mo{qty &gt; 1 ? " each" : ""}&lt;/&gt;
++                                   &lt;&gt;{formatCurrency(addon.price)}/mo&lt;/&gt;
+                                  )}
+                                &lt;/span&gt;
+                              &lt;/label&gt;
+-                             {isSelected &amp;&amp; !isIncluded &amp;&amp; (
++                             {/* Qty controls only for seat-type add-ons */}
++                             {isSelected &amp;&amp; !isIncluded &amp;&amp; addon.group === "Seats" &amp;&amp; (
+                                &lt;div className="px-3 pb-3 flex items-center justify-between" onClick={(e) =&gt; e.stopPropagation()}&gt;
+                                  &lt;div className="flex items-center gap-2 pl-7"&gt;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the **Edit modal** — only show qty controls for seat-type add-ons. Let me find the quantity controls section:
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="grep">
+<details>
+<summary>Tool use: **grep** • Grep for "Qty controls" in "/Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx" • 0 matches</summary>
+
+Output mode: content
+
+
+_No matches found_
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="grep">
+<details>
+<summary>Tool use: **grep** • Grep for "Quantity & Discount controls" in "/Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx" • 1 match</summary>
+
+Output mode: content
+
+
+| File | Content | Line |
+|------|------|------|
+| `components/EditSubscriptionModal.tsx` | `\{/* Quantity & Discount controls for selected addons (not for included) */\}` | L815 |
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+Now update the Edit modal — make qty controls conditional on `addon.group === "Seats"`, and simplify the price display for non-seat addons:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+Status: **loading**
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace**</summary>
+
+Status: **loading**
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd**</summary>
+
+</details>
+</tool-use>
+
+---
+
 
 
 ---

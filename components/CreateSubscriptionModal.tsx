@@ -300,12 +300,15 @@ export default function CreateSubscriptionModal({
                               <span className="text-sm text-gray-600 flex-shrink-0 ml-4">
                                 {isIncluded ? (
                                   <span className="text-green-600 font-medium">Included</span>
+                                ) : addon.group === "Seats" ? (
+                                  <>{formatCurrency(addon.price)}/mo each</>
                                 ) : (
-                                  <>{formatCurrency(addon.price)}/mo{qty > 1 ? " each" : ""}</>
+                                  <>{formatCurrency(addon.price)}/mo</>
                                 )}
                               </span>
                             </label>
-                            {isSelected && !isIncluded && (
+                            {/* Qty controls only for seat-type add-ons */}
+                            {isSelected && !isIncluded && addon.group === "Seats" && (
                               <div className="px-3 pb-3 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex items-center gap-2 pl-7">
                                   <span className="text-xs font-medium text-gray-500">Qty:</span>

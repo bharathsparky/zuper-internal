@@ -797,17 +797,24 @@ export default function EditSubscriptionModal({
                               <div className="ml-4 flex-shrink-0 text-right">
                                 {isIncluded ? (
                                   <span className="text-sm font-medium text-green-600">$0</span>
-                                ) : hasDiscount ? (
+                                ) : addon.group === "Seats" && hasDiscount ? (
                                   <div className="flex flex-col items-end">
                                     <span className="text-xs text-gray-400 line-through">{formatCurrency(addon.price * qty)}/mo</span>
                                     <span className="text-sm font-semibold text-green-600">{formatCurrency(lineTotal)}/mo</span>
                                     {qty > 1 && <span className="text-xs text-gray-400">{formatCurrency(discountedPrice)} each</span>}
                                   </div>
-                                ) : (
+                                ) : addon.group === "Seats" ? (
                                   <div className="flex flex-col items-end">
                                     <span className="text-sm font-semibold text-gray-900">{formatCurrency(lineTotal)}/mo</span>
                                     {qty > 1 && <span className="text-xs text-gray-400">{formatCurrency(addon.price)} each</span>}
                                   </div>
+                                ) : hasDiscount ? (
+                                  <div className="flex flex-col items-end">
+                                    <span className="text-xs text-gray-400 line-through">{formatCurrency(addon.price)}/mo</span>
+                                    <span className="text-sm font-semibold text-green-600">{formatCurrency(discountedPrice)}/mo</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-sm font-semibold text-gray-900">{formatCurrency(addon.price)}/mo</span>
                                 )}
                               </div>
                             </div>
@@ -815,30 +822,32 @@ export default function EditSubscriptionModal({
                             {/* Quantity & Discount controls for selected addons (not for included) */}
                             {isSelected && !isIncluded && (
                               <div className="px-5 pb-3 space-y-2" onClick={(e) => e.stopPropagation()}>
-                                {/* Quantity */}
-                                <div className="flex items-center gap-2 pl-8">
-                                  <span className="text-xs font-medium text-gray-500">Qty:</span>
-                                  <div className="inline-flex items-center h-7 bg-white border border-gray-300 rounded-md overflow-hidden">
-                                    <button
-                                      onClick={() => updateAddonQuantity(addon.id, qty - 1)}
-                                      className="w-7 h-full flex items-center justify-center hover:bg-gray-50"
-                                    >
-                                      <Minus className="w-3 h-3 text-gray-600" />
-                                    </button>
-                                    <input
-                                      type="number"
-                                      value={qty}
-                                      onChange={(e) => updateAddonQuantity(addon.id, parseInt(e.target.value) || 1)}
-                                      className="w-10 h-full text-center text-xs font-medium border-x border-gray-300 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                    />
-                                    <button
-                                      onClick={() => updateAddonQuantity(addon.id, qty + 1)}
-                                      className="w-7 h-full flex items-center justify-center hover:bg-gray-50"
-                                    >
-                                      <Plus className="w-3 h-3 text-gray-600" />
-                                    </button>
+                                {/* Quantity - only for seat-type add-ons */}
+                                {addon.group === "Seats" && (
+                                  <div className="flex items-center gap-2 pl-8">
+                                    <span className="text-xs font-medium text-gray-500">Qty:</span>
+                                    <div className="inline-flex items-center h-7 bg-white border border-gray-300 rounded-md overflow-hidden">
+                                      <button
+                                        onClick={() => updateAddonQuantity(addon.id, qty - 1)}
+                                        className="w-7 h-full flex items-center justify-center hover:bg-gray-50"
+                                      >
+                                        <Minus className="w-3 h-3 text-gray-600" />
+                                      </button>
+                                      <input
+                                        type="number"
+                                        value={qty}
+                                        onChange={(e) => updateAddonQuantity(addon.id, parseInt(e.target.value) || 1)}
+                                        className="w-10 h-full text-center text-xs font-medium border-x border-gray-300 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                      />
+                                      <button
+                                        onClick={() => updateAddonQuantity(addon.id, qty + 1)}
+                                        className="w-7 h-full flex items-center justify-center hover:bg-gray-50"
+                                      >
+                                        <Plus className="w-3 h-3 text-gray-600" />
+                                      </button>
+                                    </div>
                                   </div>
-                                </div>
+                                )}
                                 {/* Discount */}
                                 <div className="flex items-center gap-2 pl-8">
                                   <span className="text-xs font-medium text-gray-500 flex items-center gap-1">
@@ -881,7 +890,7 @@ export default function EditSubscriptionModal({
                                   )}
                                   {hasDiscount && (
                                     <span className="text-xs text-green-600 font-medium">
-                                      Saving {formatCurrency((addon.price - discountedPrice) * qty)}/mo
+                                      Saving {formatCurrency((addon.price - discountedPrice) * (addon.group === "Seats" ? qty : 1))}/mo
                                     </span>
                                   )}
                                 </div>
