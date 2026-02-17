@@ -116,6 +116,17 @@ export default function EditSubscriptionModal({
       [charge.id]: { discountType: charge.discountType || "none", discountValue: charge.discountValue || 0 }
     }), {})
   );
+  const [addonPrices, setAddonPrices] = useState<Record<string, number>>(
+    currentSubscription.addons.reduce((acc, addon) => {
+      const def = availableAddons.find(a => a.id === addon.id);
+      return { ...acc, [addon.id]: def?.price || 0 };
+    }, {} as Record<string, number>)
+  );
+  const [oneTimeChargePrices, setOneTimeChargePrices] = useState<Record<string, number>>(
+    (currentSubscription.oneTimeCharges || []).reduce((acc, charge) => ({
+      ...acc, [charge.id]: charge.amount
+    }), {} as Record<string, number>)
+  );
   const [addonSearch, setAddonSearch] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -142,6 +153,13 @@ export default function EditSubscriptionModal({
         ...acc,
         [charge.id]: { discountType: charge.discountType || "none", discountValue: charge.discountValue || 0 }
       }), {}));
+      setAddonPrices(currentSubscription.addons.reduce((acc, addon) => {
+        const def = availableAddons.find(a => a.id === addon.id);
+        return { ...acc, [addon.id]: def?.price || 0 };
+      }, {} as Record<string, number>));
+      setOneTimeChargePrices((currentSubscription.oneTimeCharges || []).reduce((acc, charge) => ({
+        ...acc, [charge.id]: charge.amount
+      }), {} as Record<string, number>));
     }
   }, [isOpen, currentSubscription]);
 
@@ -178,6 +196,10 @@ export default function EditSubscriptionModal({
         if (!addonQuantities[addonId]) {
           setAddonQuantities(prevQty => ({ ...prevQty, [addonId]: 1 }));
         }
+        if (!addonPrices[addonId]) {
+          const def = availableAddons.find(a => a.id === addonId);
+          if (def) setAddonPrices(prevPrices => ({ ...prevPrices, [addonId]: def.price }));
+        }
         return [...prev, addonId];
       }
     });
@@ -187,6 +209,14 @@ export default function EditSubscriptionModal({
     setAddonQuantities((prev) => ({ ...prev, [addonId]: Math.max(1, qty) }));
   };
 
+  const updateAddonPrice = (addonId: string, price: number) => {
+    setAddonPrices(prev => ({ ...prev, [addonId]: Math.max(0, price) }));
+  };
+
+  const updateOneTimeChargePrice = (chargeId: string, price: number) => {
+    setOneTimeChargePrices(prev => ({ ...prev, [chargeId]: Math.max(0, price) }));
+  };
+
   const updateAddonDiscount = (addonId: string, dt: "none" | "fixed" | "percentage", dv: number) => {
     setAddonDiscounts(prev => ({
       ...prev,
@@ -194,18 +224,25 @@ export default function EditSubscriptionModal({
     }));
   };
 
+  const getAddonPrice = (addonId: string) => {
+    if (addonPrices[addonId] !== undefined) return addonPrices[addonId];
+    const def = availableAddons.find(a => a.id === addonId);
+    return def?.price || 0;
+  };
+
   const calculateAddonDiscountedPrice = (addon: typeof availableAddons[0]) => {
+    const basePrice = getAddonPrice(addon.id);
     const discount = addonDiscounts[addon.id];
     if (!discount || discount.discountType === "none" || discount.discountValue === 0) {
-      return addon.price;
+      return basePrice;
     }
     if (discount.discountType === "fixed") {
-      return Math.max(0, addon.price - discount.discountValue);
+      return Math.max(0, basePrice - discount.discountValue);
     }
     if (discount.discountType === "percentage") {
-      return addon.price * (1 - discount.discountValue / 100);
+      return basePrice * (1 - discount.discountValue / 100);
     }
-    return addon.price;
+    return basePrice;
   };
 
   const updateOneTimeChargeDiscount = (chargeId: string, dt: "none" | "fixed" | "percentage", dv: number) => {
@@ -215,25 +252,34 @@ export default function EditSubscriptionModal({
     }));
   };
 
+  const getOneTimeChargePrice = (chargeId: string) => {
+    if (oneTimeChargePrices[chargeId] !== undefined) return oneTimeChargePrices[chargeId];
+    const charge = (currentSubscription.oneTimeCharges || []).find(c => c.id === chargeId);
+    return charge?.amount || 0;
+  };
+
   const calculateOneTimeChargeDiscountedPrice = (charge: OneTimeChargeWithDiscount) => {
+    const baseAmount = getOneTimeChargePrice(charge.id);
     const discount = oneTimeChargeDiscounts[charge.id];
     if (!discount || discount.discountType === "none" || discount.discountValue === 0) {
-      return charge.amount;
+      return baseAmount;
     }
     if (discount.discountType === "fixed") {
-      return Math.max(0, charge.amount - discount.discountValue);
+      return Math.max(0, baseAmount - discount.discountValue);
     }
     if (discount.discountType === "percentage") {
-      return charge.amount * (1 - discount.discountValue / 100);
+      return baseAmount * (1 - discount.discountValue / 100);
     }
-    return charge.amount;
+    return baseAmount;
   };
 
   // Calculate totals
   const licensesTotal = planSubtotal;
-  const addonsTotal = availableAddons
-    .filter((a) => selectedAddons.includes(a.id))
-    .reduce((sum, a) => sum + calculateAddonDiscountedPrice(a) * (addonQuantities[a.id] || 1), 0);
+  const addonsTotal = selectedAddons.reduce((sum, addonId) => {
+    const addon = availableAddons.find(a => a.id === addonId);
+    if (!addon) return sum;
+    return sum + calculateAddonDiscountedPrice(addon) * (addonQuantities[addonId] || 1);
+  }, 0);
   const grandTotal = licensesTotal + addonsTotal;
 
   const prevLic = currentSubscription.licenses[0];
@@ -321,27 +367,51 @@ export default function EditSubscriptionModal({
 
     selectedAddons.forEach((addonId) => {
       const prevAddon = currentSubscription.addons.find(a => a.id === addonId);
+      const addon = availableAddons.find(a => a.id === addonId);
+      if (!addon) return;
+
+      // Track price changes
+      const currentPrice = getAddonPrice(addonId);
+      if (prevAddon && currentPrice !== addon.price) {
+        changes.push({
+          type: "addon_price",
+          description: `${addon.name} price`,
+          from: formatCurrency(addon.price),
+          to: formatCurrency(currentPrice),
+        });
+      }
+
+      // Track discount changes
       const currentDiscount = addonDiscounts[addonId];
       if (prevAddon && currentDiscount) {
         const prevDiscountType = prevAddon.discountType || "none";
         const prevDiscountValue = prevAddon.discountValue || 0;
         if (currentDiscount.discountType !== prevDiscountType || currentDiscount.discountValue !== prevDiscountValue) {
-          const addon = availableAddons.find(a => a.id === addonId);
-          if (addon) {
-            changes.push({
-              type: "addon_discount",
-              description: `${addon.name} discount`,
-              from: prevDiscountType === "none" ? "No discount" : 
-                    prevDiscountType === "fixed" ? `$${prevDiscountValue} off` : `${prevDiscountValue}% off`,
-              to: currentDiscount.discountType === "none" ? "No discount" :
-                  currentDiscount.discountType === "fixed" ? `$${currentDiscount.discountValue} off` : `${currentDiscount.discountValue}% off`,
-            });
-          }
+          changes.push({
+            type: "addon_discount",
+            description: `${addon.name} discount`,
+            from: prevDiscountType === "none" ? "No discount" : 
+                  prevDiscountType === "fixed" ? `$${prevDiscountValue} off` : `${prevDiscountValue}% off`,
+            to: currentDiscount.discountType === "none" ? "No discount" :
+                currentDiscount.discountType === "fixed" ? `$${currentDiscount.discountValue} off` : `${currentDiscount.discountValue}% off`,
+          });
         }
       }
     });
 
     (currentSubscription.oneTimeCharges || []).forEach((charge) => {
+      // Track price changes
+      const currentAmount = getOneTimeChargePrice(charge.id);
+      if (currentAmount !== charge.amount) {
+        changes.push({
+          type: "one_time_charge_price",
+          description: `${charge.name} amount`,
+          from: formatCurrency(charge.amount),
+          to: formatCurrency(currentAmount),
+        });
+      }
+
+      // Track discount changes
       const currentDiscount = oneTimeChargeDiscounts[charge.id];
       if (currentDiscount) {
         const prevDiscountType = charge.discountType || "none";
@@ -716,7 +786,7 @@ export default function EditSubscriptionModal({
                                   <div className="flex flex-col items-end">
                                     {hasDiscount ? (
                                       <>
-                                        <span className="text-xs text-gray-400 line-through">{formatCurrency(addon.price * qty)}/mo</span>
+                                        <span className="text-xs text-gray-400 line-through">{formatCurrency(getAddonPrice(addon.id) * qty)}/mo</span>
                                         <span className="text-sm font-semibold text-green-600">{formatCurrency(lineTotal)}/mo</span>
                                       </>
                                     ) : (
@@ -726,11 +796,11 @@ export default function EditSubscriptionModal({
                                   </div>
                                 ) : hasDiscount ? (
                                   <div className="flex flex-col items-end">
-                                    <span className="text-xs text-gray-400 line-through">{formatCurrency(addon.price)}{unitLabel}/mo</span>
+                                    <span className="text-xs text-gray-400 line-through">{formatCurrency(getAddonPrice(addon.id))}{unitLabel}/mo</span>
                                     <span className="text-sm font-semibold text-green-600">{formatCurrency(discountedPrice)}{unitLabel}/mo</span>
                                   </div>
                                 ) : (
-                                  <span className="text-sm font-semibold text-gray-900">{formatCurrency(addon.price)}{unitLabel}/mo</span>
+                                  <span className="text-sm font-semibold text-gray-900">{formatCurrency(getAddonPrice(addon.id))}{unitLabel}/mo</span>
                                 )}
                               </div>
                             </div>
@@ -765,9 +835,14 @@ export default function EditSubscriptionModal({
                                     <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1.5">
                                       {addon.group === "Seats" ? "Price/Seat" : `Price${unitLabel}`}
                                     </label>
-                                    <div className="h-8 flex items-center px-2.5 bg-white border border-gray-200 rounded-lg">
-                                      <span className="text-sm font-medium text-gray-900">{formatCurrency(addon.price)}</span>
-                                      <span className="text-xs text-gray-400 ml-0.5">/mo</span>
+                                    <div className="relative h-8">
+                                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">$</span>
+                                      <input
+                                        type="number"
+                                        value={getAddonPrice(addon.id)}
+                                        onChange={(e) => updateAddonPrice(addon.id, parseFloat(e.target.value) || 0)}
+                                        className="w-full h-full pl-6 pr-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                      />
                                     </div>
                                   </div>
 
@@ -807,7 +882,7 @@ export default function EditSubscriptionModal({
                                     <div className="h-8 flex items-center justify-end px-2.5 bg-white border border-gray-100 rounded-lg">
                                       {hasDiscount ? (
                                         <div className="flex items-center gap-1.5">
-                                          <span className="text-xs text-gray-400 line-through">{formatCurrency(addon.price * (addon.group === "Seats" ? qty : 1))}</span>
+                                          <span className="text-xs text-gray-400 line-through">{formatCurrency(getAddonPrice(addon.id) * (addon.group === "Seats" ? qty : 1))}</span>
                                           <span className="text-sm font-bold text-green-600">{formatCurrency(lineTotal)}</span>
                                         </div>
                                       ) : (
@@ -843,9 +918,11 @@ export default function EditSubscriptionModal({
                     const hasDiscount = discount.discountType !== "none" && discount.discountValue > 0;
                     const discountedPrice = calculateOneTimeChargeDiscountedPrice(charge);
                     const prevDiscount = (currentSubscription.oneTimeCharges || []).find(c => c.id === charge.id);
+                    const currentAmount = getOneTimeChargePrice(charge.id);
                     const isChanged = prevDiscount && (
                       discount.discountType !== (prevDiscount.discountType || "none") ||
-                      discount.discountValue !== (prevDiscount.discountValue || 0)
+                      discount.discountValue !== (prevDiscount.discountValue || 0) ||
+                      currentAmount !== charge.amount
                     );
 
                     return (
@@ -862,8 +939,14 @@ export default function EditSubscriptionModal({
                           {/* Amount */}
                           <div>
                             <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1.5">Amount</label>
-                            <div className="h-8 flex items-center px-2.5 bg-white border border-gray-200 rounded-lg">
-                              <span className="text-sm font-medium text-gray-900">{formatCurrency(charge.amount)}</span>
+                            <div className="relative h-8">
+                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">$</span>
+                              <input
+                                type="number"
+                                value={currentAmount}
+                                onChange={(e) => updateOneTimeChargePrice(charge.id, parseFloat(e.target.value) || 0)}
+                                className="w-full h-full pl-6 pr-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              />
                             </div>
                           </div>
                           {/* Discount */}
@@ -901,11 +984,11 @@ export default function EditSubscriptionModal({
                             <div className="h-8 flex items-center justify-end px-2.5 bg-white border border-gray-100 rounded-lg">
                               {hasDiscount ? (
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-xs text-gray-400 line-through">{formatCurrency(charge.amount)}</span>
+                                  <span className="text-xs text-gray-400 line-through">{formatCurrency(currentAmount)}</span>
                                   <span className="text-sm font-bold text-green-600">{formatCurrency(discountedPrice)}</span>
                                 </div>
                               ) : (
-                                <span className="text-sm font-bold text-gray-900">{formatCurrency(charge.amount)}</span>
+                                <span className="text-sm font-bold text-gray-900">{formatCurrency(currentAmount)}</span>
                               )}
                             </div>
                           </div>
