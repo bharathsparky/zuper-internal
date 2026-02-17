@@ -56,13 +56,13 @@ const mockSubscription = {
     },
   ],
   addons: [
-    { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, group: "Seats", description: "Login, time tracking, geo tracking, basic job view", discountType: "none" as const, discountValue: 0 },
-    { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, group: "Zuper Connect", description: "SMS/MMS telephony with call flows, recording, CRM sync", discountType: "none" as const, discountValue: 0 },
-    { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, group: "Zuper Fleet", description: "GPS tracking, AI safety cams, health monitoring", discountType: "none" as const, discountValue: 0 },
-    { id: "customer_portal", name: "Customer Portal", price: 0, group: "Platform Features", description: "Branded self-service portal for jobs, invoices, and requests", discountType: "none" as const, discountValue: 0 },
-    { id: "report_builder", name: "Report Builder", price: 0, group: "Platform Features", description: "Advanced reporting for custom dashboards and KPIs", discountType: "none" as const, discountValue: 0 },
-    { id: "workflow_builder", name: "Workflow Builder", price: 0, group: "Platform Features", description: "Visual automation for processes (up to 5,000 executions/mo)", discountType: "none" as const, discountValue: 0 },
-    { id: "platform_maintenance", name: "Platform Maintenance Fee", price: 0, group: "Platform Features", description: "Annual infrastructure, maintenance, and compliance", discountType: "none" as const, discountValue: 0 },
+    { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, quantity: 5, group: "Seats", description: "Login, time tracking, geo tracking, basic job view", discountType: "none" as const, discountValue: 0 },
+    { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, quantity: 1, group: "Zuper Connect", description: "SMS/MMS telephony with call flows, recording, CRM sync", discountType: "none" as const, discountValue: 0 },
+    { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, quantity: 3, group: "Zuper Fleet", description: "GPS tracking, AI safety cams, health monitoring", discountType: "none" as const, discountValue: 0 },
+    { id: "customer_portal", name: "Customer Portal", price: 0, quantity: 1, group: "Platform Features", description: "Branded self-service portal for jobs, invoices, and requests", discountType: "none" as const, discountValue: 0 },
+    { id: "report_builder", name: "Report Builder", price: 0, quantity: 1, group: "Platform Features", description: "Advanced reporting for custom dashboards and KPIs", discountType: "none" as const, discountValue: 0 },
+    { id: "workflow_builder", name: "Workflow Builder", price: 0, quantity: 1, group: "Platform Features", description: "Visual automation for processes (up to 5,000 executions/mo)", discountType: "none" as const, discountValue: 0 },
+    { id: "platform_maintenance", name: "Platform Maintenance Fee", price: 0, quantity: 1, group: "Platform Features", description: "Annual infrastructure, maintenance, and compliance", discountType: "none" as const, discountValue: 0 },
   ],
   oneTimeCharges: [
     { id: "implementation", name: "Implementation Fee", amount: 2500, status: "paid" as const, paidDate: "2024-10-15", discountType: "none" as const, discountValue: 0 },
@@ -170,7 +170,7 @@ export default function Subscription() {
   const licensesTotal = lic.purchased * licDiscountedPrice;
   const addonsTotal = subscription.addons.reduce((sum, addon) => {
     const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType || "none", addon.discountValue || 0);
-    return sum + discountedPrice;
+    return sum + discountedPrice * (addon.quantity || 1);
   }, 0);
   const oneTimeChargesTotal = subscription.oneTimeCharges?.reduce((sum, charge) => {
     const discountedAmount = calculateDiscountedPrice(charge.amount, charge.discountType || "none", charge.discountValue || 0);
@@ -193,6 +193,7 @@ export default function Subscription() {
     }],
     addons: subscription.addons.map((a) => ({
       id: a.id,
+      quantity: a.quantity || 1,
       discountType: (a.discountType || "none") as "none" | "fixed" | "percentage",
       discountValue: a.discountValue || 0,
     })),
@@ -470,6 +471,9 @@ export default function Subscription() {
                                   const isIncluded = group === "Platform Features" && isRoofing;
                                   const hasDiscount = addon.discountType && addon.discountType !== "none" && addon.discountValue > 0;
                                   const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType || "none", addon.discountValue || 0);
+                                  const qty = addon.quantity || 1;
+                                  const lineTotal = discountedPrice * qty;
+                                  const originalLineTotal = addon.price * qty;
 
                                   return (
                                     <div
@@ -478,9 +482,16 @@ export default function Subscription() {
                                         isIncluded ? "bg-green-50 border-green-200" : "bg-white border-gray-200"
                                       }`}
                                     >
-                                      <div className="flex items-center gap-3">
-                                        <div>
-                                          <span className="text-sm font-medium text-gray-900">{addon.name}</span>
+                                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                                        <div className="min-w-0">
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-sm font-medium text-gray-900">{addon.name}</span>
+                                            {qty > 1 && (
+                                              <span className="inline-flex items-center px-1.5 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded">
+                                                ×{qty}
+                                              </span>
+                                            )}
+                                          </div>
                                           {addon.description && (
                                             <p className="text-xs text-gray-500">{addon.description}</p>
                                           )}
@@ -498,14 +509,26 @@ export default function Subscription() {
                                         ) : hasDiscount ? (
                                           <div className="flex flex-col items-end">
                                             <span className="text-xs text-gray-400 line-through">
-                                              {formatCurrency(addon.price)}/mo
+                                              {formatCurrency(originalLineTotal)}/mo
                                             </span>
                                             <span className="text-sm font-medium text-green-600">
-                                              {formatCurrency(discountedPrice)}/mo
+                                              {formatCurrency(lineTotal)}/mo
                                             </span>
+                                            {qty > 1 && (
+                                              <span className="text-xs text-gray-400">
+                                                {formatCurrency(discountedPrice)} each
+                                              </span>
+                                            )}
                                           </div>
                                         ) : (
-                                          <span className="text-sm font-medium text-gray-900">{formatCurrency(addon.price)}/mo</span>
+                                          <div className="flex flex-col items-end">
+                                            <span className="text-sm font-medium text-gray-900">{formatCurrency(lineTotal)}/mo</span>
+                                            {qty > 1 && (
+                                              <span className="text-xs text-gray-400">
+                                                {formatCurrency(addon.price)} each
+                                              </span>
+                                            )}
+                                          </div>
                                         )}
                                       </div>
                                     </div>

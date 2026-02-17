@@ -5527,7 +5527,1930 @@ Now update the editModalData to pass a single license as an array (for backward 
 
 <details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
 
-Status: **loading**
+**Chunk 1**
+Lines added: 9, lines removed: 9
+
+```diff
+@@ -183,13 +183,13 @@
+      plan: "roofing_premium",
+      billingCycle: subscription.billingCycle.toLowerCase() as "monthly" | "quarterly" | "annually",
+-     licenses: subscription.licenses.map((lic) =&gt; ({
+-       id: lic.id,
+-       type: lic.type,
+-       quantity: lic.purchased,
+-       activeUsers: lic.active,
+-       pricePerLicense: lic.pricePerLicense,
+-       discountType: (lic.discountType || "none") as "none" | "fixed" | "percentage",
+-       discountValue: lic.discountValue || 0,
+-     })),
++     licenses: [{
++       id: subscription.license.id,
++       type: subscription.license.type,
++       quantity: subscription.license.purchased,
++       activeUsers: subscription.license.active,
++       pricePerLicense: subscription.license.pricePerLicense,
++       discountType: (subscription.license.discountType || "none") as "none" | "fixed" | "percentage",
++       discountValue: subscription.license.discountValue || 0,
++     }],
+      addons: subscription.addons.map((a) =&gt; ({
+        id: a.id,
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the totalLicenses and the Plan section display. Replace the multi-row table with a single-plan display:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -239,5 +239,5 @@
+    }
+  
+-   const totalLicenses = subscription.licenses.reduce((sum, l) =&gt; sum + l.purchased, 0);
++   const totalLicenses = subscription.license.purchased;
+    const totalNonBillable = subscription.nonBillableLicenses?.reduce((sum, l) =&gt; sum + l.count, 0) || 0;
+  
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now replace the collapsible Plan section — instead of a multi-row table, show a single plan with its details:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: 91, lines removed: 107
+
+```diff
+@@ -334,112 +334,96 @@
+  
+                {/* Collapsible Plan Section */}
+-               &lt;div className="bg-gray-50 rounded-xl overflow-hidden"&gt;
+-                 &lt;button
+-                   onClick={() =&gt; setIsPlanExpanded(!isPlanExpanded)}
+-                   className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-100 transition-colors"
+-                 &gt;
+-                   &lt;div className="flex items-center gap-3"&gt;
+-                     &lt;div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center"&gt;
+-                       &lt;Users className="w-4 h-4 text-blue-600" /&gt;
+-                     &lt;/div&gt;
+-                     &lt;div className="text-left"&gt;
+-                       &lt;h3 className="text-sm font-semibold text-gray-900"&gt;Plan&lt;/h3&gt;
+-                       &lt;p className="text-xs text-gray-500"&gt;
+-                         {totalLicenses} billable{totalNonBillable &gt; 0 ? &#96; · ${totalNonBillable} non-billable&#96; : ''}
+-                       &lt;/p&gt;
+-                     &lt;/div&gt;
+-                   &lt;/div&gt;
+-                   &lt;div className="flex items-center gap-3"&gt;
+-                     &lt;span className="text-sm font-semibold text-gray-900"&gt;{formatCurrency(licensesTotal)}/mo&lt;/span&gt;
+-                     {isPlanExpanded ? (
+-                       &lt;ChevronDown className="w-5 h-5 text-gray-400" /&gt;
+-                     ) : (
+-                       &lt;ChevronRight className="w-5 h-5 text-gray-400" /&gt;
+-                     )}
+-                   &lt;/div&gt;
+-                 &lt;/button&gt;
+-                 {isPlanExpanded &amp;&amp; (
+-                   &lt;div className="px-5 pb-5 space-y-4"&gt;
+-                     {/* Billable Licenses */}
+-                     &lt;div className="bg-white rounded-lg border border-gray-200 overflow-hidden"&gt;
+-                       &lt;table className="w-full"&gt;
+-                         &lt;thead&gt;
+-                           &lt;tr className="border-b border-gray-100 bg-gray-50"&gt;
+-                             &lt;th className="text-left py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider"&gt;Type&lt;/th&gt;
+-                             &lt;th className="text-center py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider"&gt;Qty&lt;/th&gt;
+-                             &lt;th className="text-center py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider"&gt;Active&lt;/th&gt;
+-                             &lt;th className="text-center py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider"&gt;Discount&lt;/th&gt;
+-                             &lt;th className="text-right py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider"&gt;Price&lt;/th&gt;
+-                           &lt;/tr&gt;
+-                         &lt;/thead&gt;
+-                         &lt;tbody className="divide-y divide-gray-50"&gt;
+-                           {subscription.licenses.map((license) =&gt; {
+-                             const hasDiscount = license.discountType &amp;&amp; license.discountType !== "none" &amp;&amp; license.discountValue &gt; 0;
+-                             const originalTotal = license.purchased * license.pricePerLicense;
+-                             const discountedPrice = calculateDiscountedPrice(license.pricePerLicense, license.discountType || "none", license.discountValue || 0);
+-                             const discountedTotal = license.purchased * discountedPrice;
+-                             
+-                             return (
+-                               &lt;tr key={license.id}&gt;
+-                                 &lt;td className="py-3 px-4"&gt;
+-                                   &lt;span className="text-sm font-medium text-gray-900"&gt;
+-                                     {licenseTypeLabels[license.type] || license.type}
+-                                   &lt;/span&gt;
+-                                 &lt;/td&gt;
+-                                 &lt;td className="py-3 px-4 text-center"&gt;
+-                                   &lt;span className="text-sm text-gray-900"&gt;{license.purchased}&lt;/span&gt;
+-                                 &lt;/td&gt;
+-                                 &lt;td className="py-3 px-4 text-center"&gt;
+-                                   &lt;LicenseCounter used={license.active} total={license.purchased} /&gt;
+-                                 &lt;/td&gt;
+-                                 &lt;td className="py-3 px-4 text-center"&gt;
+-                                   {hasDiscount ? (
+-                                     &lt;span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full"&gt;
+-                                       &lt;Tag className="w-3 h-3" /&gt;
+-                                       {(license.discountType as "fixed" | "percentage") === "fixed" ? &#96;$${license.discountValue}&#96; : &#96;${license.discountValue}%&#96;}
+-                                     &lt;/span&gt;
+-                                   ) : (
+-                                     &lt;span className="text-xs text-gray-400"&gt;—&lt;/span&gt;
+-                                   )}
+-                                 &lt;/td&gt;
+-                                 &lt;td className="py-3 px-4 text-right"&gt;
+-                                   {hasDiscount ? (
+-                                     &lt;div className="flex flex-col items-end"&gt;
+-                                       &lt;span className="text-xs text-gray-400 line-through"&gt;
+-                                         {formatCurrency(originalTotal)}
+-                                       &lt;/span&gt;
+-                                       &lt;span className="text-sm font-medium text-green-600"&gt;
+-                                         {formatCurrency(discountedTotal)}
+-                                       &lt;/span&gt;
+-                                     &lt;/div&gt;
+-                                   ) : (
+-                                     &lt;span className="text-sm font-medium text-gray-900"&gt;
+-                                       {formatCurrency(originalTotal)}
+-                                     &lt;/span&gt;
+-                                   )}
+-                                 &lt;/td&gt;
+-                               &lt;/tr&gt;
+-                             );
+-                           })}
+-                         &lt;/tbody&gt;
+-                       &lt;/table&gt;
+-                     &lt;/div&gt;
++               {(() =&gt; {
++                 const license = subscription.license;
++                 const hasDiscount = license.discountType &amp;&amp; license.discountType !== "none" &amp;&amp; license.discountValue &gt; 0;
++                 const originalTotal = license.purchased * license.pricePerLicense;
++                 const discountedTotal = license.purchased * licDiscountedPrice;
++ 
++                 return (
++                   &lt;div className="bg-gray-50 rounded-xl overflow-hidden"&gt;
++                     &lt;button
++                       onClick={() =&gt; setIsPlanExpanded(!isPlanExpanded)}
++                       className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-100 transition-colors"
++                     &gt;
++                       &lt;div className="flex items-center gap-3"&gt;
++                         &lt;div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center"&gt;
++                           &lt;Users className="w-4 h-4 text-blue-600" /&gt;
++                         &lt;/div&gt;
++                         &lt;div className="text-left"&gt;
++                           &lt;h3 className="text-sm font-semibold text-gray-900"&gt;
++                             {licenseTypeLabels[license.type] || license.type}
++                           &lt;/h3&gt;
++                           &lt;p className="text-xs text-gray-500"&gt;
++                             {totalLicenses} seats{totalNonBillable &gt; 0 ? &#96; · ${totalNonBillable} non-billable&#96; : ''}
++                           &lt;/p&gt;
++                         &lt;/div&gt;
++                       &lt;/div&gt;
++                       &lt;div className="flex items-center gap-3"&gt;
++                         &lt;span className="text-sm font-semibold text-gray-900"&gt;{formatCurrency(licensesTotal)}/mo&lt;/span&gt;
++                         {isPlanExpanded ? (
++                           &lt;ChevronDown className="w-5 h-5 text-gray-400" /&gt;
++                         ) : (
++                           &lt;ChevronRight className="w-5 h-5 text-gray-400" /&gt;
++                         )}
++                       &lt;/div&gt;
++                     &lt;/button&gt;
++                     {isPlanExpanded &amp;&amp; (
++                       &lt;div className="px-5 pb-5 space-y-4"&gt;
++                         {/* Plan Details */}
++                         &lt;div className="bg-white rounded-lg border border-gray-200 p-4"&gt;
++                           &lt;div className="grid grid-cols-2 lg:grid-cols-4 gap-4"&gt;
++                             &lt;div&gt;
++                               &lt;p className="text-xs font-medium text-gray-500 mb-1"&gt;Seats&lt;/p&gt;
++                               &lt;p className="text-sm font-semibold text-gray-900"&gt;{license.purchased}&lt;/p&gt;
++                             &lt;/div&gt;
++                             &lt;div&gt;
++                               &lt;p className="text-xs font-medium text-gray-500 mb-1"&gt;Active&lt;/p&gt;
++                               &lt;LicenseCounter used={license.active} total={license.purchased} /&gt;
++                             &lt;/div&gt;
++                             &lt;div&gt;
++                               &lt;p className="text-xs font-medium text-gray-500 mb-1"&gt;Price/Seat&lt;/p&gt;
++                               &lt;p className="text-sm font-semibold text-gray-900"&gt;{formatCurrency(license.pricePerLicense)}&lt;/p&gt;
++                             &lt;/div&gt;
++                             &lt;div&gt;
++                               &lt;p className="text-xs font-medium text-gray-500 mb-1"&gt;Discount&lt;/p&gt;
++                               {hasDiscount ? (
++                                 &lt;span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full"&gt;
++                                   &lt;Tag className="w-3 h-3" /&gt;
++                                   {license.discountType === "fixed" ? &#96;$${license.discountValue} off&#96; : &#96;${license.discountValue}% off&#96;}
++                                 &lt;/span&gt;
++                               ) : (
++                                 &lt;span className="text-xs text-gray-400"&gt;—&lt;/span&gt;
++                               )}
++                             &lt;/div&gt;
++                           &lt;/div&gt;
++                           {hasDiscount &amp;&amp; (
++                             &lt;div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between"&gt;
++                               &lt;span className="text-xs text-gray-500"&gt;Total&lt;/span&gt;
++                               &lt;div className="flex items-center gap-2"&gt;
++                                 &lt;span className="text-xs text-gray-400 line-through"&gt;{formatCurrency(originalTotal)}&lt;/span&gt;
++                                 &lt;span className="text-sm font-semibold text-green-600"&gt;{formatCurrency(discountedTotal)}/mo&lt;/span&gt;
++                               &lt;/div&gt;
++                             &lt;/div&gt;
++                           )}
++                         &lt;/div&gt;
+  
+-                     {/* Non-Billable Licenses - Simplified */}
+-                     {subscription.nonBillableLicenses &amp;&amp; subscription.nonBillableLicenses.length &gt; 0 &amp;&amp; (
+-                       &lt;div className="flex items-center justify-between py-3 px-4 bg-white rounded-lg border border-gray-200"&gt;
+-                         &lt;div className="flex items-center gap-2"&gt;
+-                           &lt;UserX className="w-4 h-4 text-gray-400" /&gt;
+-                           &lt;span className="text-sm text-gray-600"&gt;Non-billable licenses&lt;/span&gt;
+-                         &lt;/div&gt;
+-                         &lt;div className="text-right"&gt;
+-                           &lt;span className="text-sm font-semibold text-gray-900"&gt;{totalNonBillable}&lt;/span&gt;
+-                           &lt;span className="text-xs text-gray-500 ml-1"&gt;no charge&lt;/span&gt;
+-                         &lt;/div&gt;
+-                       &lt;/div&gt;
+-                     )}
+-                   &lt;/div&gt;
+-                 )}
+-               &lt;/div&gt;
++                         {/* Non-Billable Licenses */}
++                         {subscription.nonBillableLicenses &amp;&amp; subscription.nonBillableLicenses.length &gt; 0 &amp;&amp; (
++                           &lt;div className="flex items-center justify-between py-3 px-4 bg-white rounded-lg border border-gray-200"&gt;
++                             &lt;div className="flex items-center gap-2"&gt;
++                               &lt;UserX className="w-4 h-4 text-gray-400" /&gt;
++                               &lt;span className="text-sm text-gray-600"&gt;Non-billable licenses&lt;/span&gt;
++                             &lt;/div&gt;
++                             &lt;div className="text-right"&gt;
++                               &lt;span className="text-sm font-semibold text-gray-900"&gt;{totalNonBillable}&lt;/span&gt;
++                               &lt;span className="text-xs text-gray-500 ml-1"&gt;no charge&lt;/span&gt;
++                             &lt;/div&gt;
++                           &lt;/div&gt;
++                         )}
++                       &lt;/div&gt;
++                     )}
++                   &lt;/div&gt;
++                 );
++               })()}
+  
+                {/* Collapsible Add-ons Section */}
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="task" data-tool-name="todo_write">
+<details><summary>Tool use: **todo_write** • Todo List</summary>
+
+- [x] Subscription.tsx - single plan in mock data & display
+- [-] CreateSubscriptionModal - remove multi-plan, single plan only
+- [ ] EditSubscriptionModal - remove multi-plan, single plan only
+- [ ] Build & push
+
+</details>
+</tool-use>
+
+---
+
+Now update `CreateSubscriptionModal.tsx` — remove the multi-license model and use a single plan with quantity/price:
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+<think><details><summary>Thought Process</summary>
+Now I need to update the CreateSubscriptionModal to only allow a single plan. The key changes:
+
+1. Remove the multi-license state — replace with a single plan configuration (quantity, pricePerLicense)
+2. When the plan dropdown changes, auto-update the price
+3. Remove "Add Plan Type" button
+4. Remove the `License` interface and related multi-license functions
+5. Simplify the Plan Configuration section to show one plan's config
+
+Let me rewrite the relevant sections.</details></think>
+
+---
+
+Now I'll update the CreateSubscriptionModal to enforce a single plan. I'll replace the multi-license state and configuration with a single plan:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 8
+
+```diff
+@@ -2,14 +2,7 @@
+  
+  import { useState } from "react";
+- import { X, Plus, Trash2, Minus, ChevronDown } from "lucide-react";
++ import { X, Plus, Minus, ChevronDown } from "lucide-react";
+  import { Button } from "@/components/ui/Button";
+  import { formatCurrency } from "@/lib/utils";
+- 
+- interface License {
+-   id: string;
+-   type: string;
+-   quantity: number;
+-   pricePerLicense: number;
+- }
+  
+  interface CreateSubscriptionModalProps {
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now replace the state management — single plan quantity/price instead of array:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 2, lines removed: 3
+
+```diff
+@@ -43,7 +43,6 @@
+    const [plan, setPlan] = useState("roofing_premium");
+    const [billingCycle, setBillingCycle] = useState&lt;"monthly" | "annually"&gt;("monthly");
+-   const [licenses, setLicenses] = useState&lt;License[]&gt;([
+-     { id: "1", type: "roofing_premium", quantity: 10, pricePerLicense: 50 },
+-   ]);
++   const [quantity, setQuantity] = useState(10);
++   const [pricePerSeat, setPricePerSeat] = useState(50);
+    const [selectedAddons, setSelectedAddons] = useState&lt;string[]&gt;([]);
+    const [trialPeriod, setTrialPeriod] = useState&lt;string&gt;("none");
+```
+
+**Chunk 2**
+Lines added: 5, lines removed: 33
+
+```diff
+@@ -53,37 +52,9 @@
+    if (!isOpen) return null;
+  
+-   const updateLicenseQuantity = (id: string, delta: number) =&gt; {
+-     setLicenses((prev) =&gt;
+-       prev.map((lic) =&gt;
+-         lic.id === id
+-           ? { ...lic, quantity: Math.max(0, lic.quantity + delta) }
+-           : lic
+-       )
+-     );
+-   };
+- 
+-   const updateLicensePrice = (id: string, price: number) =&gt; {
+-     setLicenses((prev) =&gt;
+-       prev.map((lic) =&gt; (lic.id === id ? { ...lic, pricePerLicense: price } : lic))
+-     );
+-   };
+- 
+-   const removeLicense = (id: string) =&gt; {
+-     setLicenses((prev) =&gt; prev.filter((lic) =&gt; lic.id !== id));
+-   };
+- 
+-   const addLicense = () =&gt; {
+-     const usedTypes = licenses.map((l) =&gt; l.type);
+-     const availableType = licenseTypes.find((t) =&gt; !usedTypes.includes(t.value));
+-     if (availableType) {
+-       setLicenses((prev) =&gt; [
+-         ...prev,
+-         {
+-           id: Date.now().toString(),
+-           type: availableType.value,
+-           quantity: 1,
+-           pricePerLicense: availableType.defaultPrice,
+-         },
+-       ]);
++   const handlePlanChange = (newPlan: string) =&gt; {
++     setPlan(newPlan);
++     const planDef = licenseTypes.find((t) =&gt; t.value === newPlan);
++     if (planDef) {
++       setPricePerSeat(planDef.defaultPrice);
+      }
+    };
+```
+
+**Chunk 3**
+Lines added: 1, lines removed: 4
+
+```diff
+@@ -98,8 +69,5 @@
+  
+    // Calculate totals
+-   const licensesTotal = licenses.reduce(
+-     (sum, lic) =&gt; sum + lic.quantity * lic.pricePerLicense,
+-     0
+-   );
++   const licensesTotal = quantity * pricePerSeat;
+    const addonsTotal = addons
+      .filter((a) =&gt; selectedAddons.includes(a.id))
+```
+
+**Chunk 4**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -115,5 +83,5 @@
+    };
+  
+-   const getLicenseLabel = (type: string) =&gt; {
++   const getPlanLabel = (type: string) =&gt; {
+      return licenseTypes.find((t) =&gt; t.value === type)?.label || type;
+    };
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the Plan Selection dropdown to use the new `handlePlanChange`:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -125,5 +125,5 @@
+                    &lt;select
+                      value={plan}
+-                     onChange={(e) =&gt; setPlan(e.target.value)}
++                     onChange={(e) =&gt; handlePlanChange(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    &gt;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now replace the Plan Configuration section (multi-license) with a single-plan config:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 58, lines removed: 97
+
+```diff
+@@ -180,101 +180,62 @@
+            {/* Plan Configuration */}
+            &lt;section&gt;
+-             &lt;div className="flex items-center justify-between mb-4"&gt;
+-               &lt;h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider"&gt;
+-                 Plan Configuration
+-               &lt;/h3&gt;
+-               &lt;button
+-                 onClick={addLicense}
+-                 disabled={licenses.length &gt;= licenseTypes.length}
+-                 className="flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 disabled:text-gray-400 disabled:cursor-not-allowed"
+-               &gt;
+-                 &lt;Plus className="w-4 h-4" /&gt;
+-                 Add Plan Type
+-               &lt;/button&gt;
+-             &lt;/div&gt;
+- 
+-             &lt;div className="space-y-4"&gt;
+-               {licenses.map((license) =&gt; (
+-                 &lt;div
+-                   key={license.id}
+-                   className="p-4 bg-gray-50 rounded-lg border border-gray-200"
+-                 &gt;
+-                   &lt;div className="flex items-start justify-between mb-3"&gt;
+-                     &lt;h4 className="text-sm font-medium text-gray-900"&gt;
+-                       {getLicenseLabel(license.type)}
+-                     &lt;/h4&gt;
+-                     &lt;button
+-                       onClick={() =&gt; removeLicense(license.id)}
+-                       className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+-                     &gt;
+-                       &lt;Trash2 className="w-4 h-4" /&gt;
+-                     &lt;/button&gt;
+-                   &lt;/div&gt;
+-                   &lt;div className="grid grid-cols-3 gap-4"&gt;
+-                     &lt;div&gt;
+-                       &lt;label className="block text-xs font-medium text-gray-500 mb-1"&gt;
+-                         Quantity
+-                       &lt;/label&gt;
+-                       &lt;div className="flex items-center"&gt;
+-                         &lt;button
+-                           onClick={() =&gt; updateLicenseQuantity(license.id, -1)}
+-                           className="p-2 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-50"
+-                         &gt;
+-                           &lt;Minus className="w-4 h-4 text-gray-600" /&gt;
+-                         &lt;/button&gt;
+-                         &lt;input
+-                           type="number"
+-                           value={license.quantity}
+-                           onChange={(e) =&gt;
+-                             setLicenses((prev) =&gt;
+-                               prev.map((l) =&gt;
+-                                 l.id === license.id
+-                                   ? { ...l, quantity: parseInt(e.target.value) || 0 }
+-                                   : l
+-                               )
+-                             )
+-                           }
+-                           className="w-16 text-center py-2 border-y border-gray-300 text-sm focus:outline-none"
+-                         /&gt;
+-                         &lt;button
+-                           onClick={() =&gt; updateLicenseQuantity(license.id, 1)}
+-                           className="p-2 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-50"
+-                         &gt;
+-                           &lt;Plus className="w-4 h-4 text-gray-600" /&gt;
+-                         &lt;/button&gt;
+-                       &lt;/div&gt;
+-                     &lt;/div&gt;
+-                     &lt;div&gt;
+-                       &lt;label className="block text-xs font-medium text-gray-500 mb-1"&gt;
+-                         Price/License
+-                       &lt;/label&gt;
+-                       &lt;div className="relative"&gt;
+-                         &lt;span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"&gt;
+-                           $
+-                         &lt;/span&gt;
+-                         &lt;input
+-                           type="number"
+-                           value={license.pricePerLicense}
+-                           onChange={(e) =&gt;
+-                             updateLicensePrice(
+-                               license.id,
+-                               parseFloat(e.target.value) || 0
+-                             )
+-                           }
+-                           className="w-full pl-7 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+-                         /&gt;
+-                       &lt;/div&gt;
+-                     &lt;/div&gt;
+-                     &lt;div&gt;
+-                       &lt;label className="block text-xs font-medium text-gray-500 mb-1"&gt;
+-                         Subtotal
+-                       &lt;/label&gt;
+-                       &lt;p className="py-2 text-sm font-semibold text-gray-900"&gt;
+-                         {formatCurrency(license.quantity * license.pricePerLicense)}
+-                       &lt;/p&gt;
+-                     &lt;/div&gt;
+-                   &lt;/div&gt;
+-                 &lt;/div&gt;
+-               ))}
++             &lt;h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4"&gt;
++               Plan Configuration
++             &lt;/h3&gt;
++             &lt;div className="p-4 bg-gray-50 rounded-lg border border-gray-200"&gt;
++               &lt;h4 className="text-sm font-medium text-gray-900 mb-3"&gt;
++                 {getPlanLabel(plan)}
++               &lt;/h4&gt;
++               &lt;div className="grid grid-cols-3 gap-4"&gt;
++                 &lt;div&gt;
++                   &lt;label className="block text-xs font-medium text-gray-500 mb-1"&gt;
++                     Seats
++                   &lt;/label&gt;
++                   &lt;div className="flex items-center"&gt;
++                     &lt;button
++                       onClick={() =&gt; setQuantity(Math.max(1, quantity - 1))}
++                       className="p-2 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-50"
++                     &gt;
++                       &lt;Minus className="w-4 h-4 text-gray-600" /&gt;
++                     &lt;/button&gt;
++                     &lt;input
++                       type="number"
++                       value={quantity}
++                       onChange={(e) =&gt; setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
++                       className="w-16 text-center py-2 border-y border-gray-300 text-sm focus:outline-none"
++                     /&gt;
++                     &lt;button
++                       onClick={() =&gt; setQuantity(quantity + 1)}
++                       className="p-2 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-50"
++                     &gt;
++                       &lt;Plus className="w-4 h-4 text-gray-600" /&gt;
++                     &lt;/button&gt;
++                   &lt;/div&gt;
++                 &lt;/div&gt;
++                 &lt;div&gt;
++                   &lt;label className="block text-xs font-medium text-gray-500 mb-1"&gt;
++                     Price/Seat
++                   &lt;/label&gt;
++                   &lt;div className="relative"&gt;
++                     &lt;span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"&gt;
++                       $
++                     &lt;/span&gt;
++                     &lt;input
++                       type="number"
++                       value={pricePerSeat}
++                       onChange={(e) =&gt; setPricePerSeat(parseFloat(e.target.value) || 0)}
++                       className="w-full pl-7 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
++                     /&gt;
++                   &lt;/div&gt;
++                 &lt;/div&gt;
++                 &lt;div&gt;
++                   &lt;label className="block text-xs font-medium text-gray-500 mb-1"&gt;
++                     Subtotal
++                   &lt;/label&gt;
++                   &lt;p className="py-2 text-sm font-semibold text-gray-900"&gt;
++                     {formatCurrency(quantity * pricePerSeat)}
++                   &lt;/p&gt;
++                 &lt;/div&gt;
++               &lt;/div&gt;
+              &lt;/div&gt;
+            &lt;/section&gt;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now remove the unused `Trash2` import:
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="grep">
+<details>
+<summary>Tool use: **grep** • Grep for "Trash2" in "/Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx" • 0 matches</summary>
+
+Output mode: content
+
+
+_No matches found_
+
+</details>
+</tool-use>
+
+---
+
+Good, `Trash2` was already removed from the imports. Now let me update the EditSubscriptionModal:
+
+---
+
+<tool-use data-tool-type="task" data-tool-name="todo_write">
+<details><summary>Tool use: **todo_write** • Todo List</summary>
+
+- [x] Subscription.tsx - single plan in mock data & display
+- [x] CreateSubscriptionModal - remove multi-plan, single plan only
+- [-] EditSubscriptionModal - remove multi-plan, single plan only
+- [ ] Build & push
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+This is a big file. I need to change it to support a single plan (license) instead of multiple. Key changes:
+
+1. Remove the `License` interface and multi-license state
+2. Add single plan quantity/price/discount state
+3. Remove `addLicense`, `removeLicense` functions
+4. Update `updateLicenseQuantity`, `updateLicensePrice`, `updateLicenseDiscount` to work with single values
+5. Update the Plan section UI to show single plan config
+6. Update the change detection logic
+7. Remove `Trash2` import since no more remove button
+8. Update the billing summary
+
+
+9. I'll work through these changes systematically, starting with the state management and then updating the UI components and helper functions accordingly.</details></think>
+
+---
+
+This is a large file. I'll make targeted replacements to convert from multi-plan to single-plan. First, update imports and interface:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: undefined, lines removed: 1
+
+```diff
+@@ -5,5 +5,4 @@
+    X,
+    Plus,
+-   Trash2,
+    Minus,
+    ChevronDown,
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the state initialization — single license from the first (only) element:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 6, lines removed: 7
+
+```diff
+@@ -90,15 +90,14 @@
+    currentSubscription,
+  }: EditSubscriptionModalProps) {
++   const initLicense = currentSubscription.licenses[0];
+    const [plan, setPlan] = useState(currentSubscription.plan);
+    const [billingCycle, setBillingCycle] = useState&lt;"monthly" | "quarterly" | "annually"&gt;(
+      currentSubscription.billingCycle
+    );
+-   const [licenses, setLicenses] = useState&lt;License[]&gt;(
+-     currentSubscription.licenses.map(lic =&gt; ({
+-       ...lic,
+-       discountType: lic.discountType || "none",
+-       discountValue: lic.discountValue || 0,
+-     }))
+-   );
++   const [quantity, setQuantity] = useState(initLicense?.quantity || 1);
++   const [activeUsers] = useState(initLicense?.activeUsers || 0);
++   const [pricePerSeat, setPricePerSeat] = useState(initLicense?.pricePerLicense || 0);
++   const [discountType, setDiscountType] = useState&lt;"none" | "fixed" | "percentage"&gt;(initLicense?.discountType || "none");
++   const [discountValue, setDiscountValue] = useState(initLicense?.discountValue || 0);
+    const [addonDiscounts, setAddonDiscounts] = useState&lt;Record&lt;string, { discountType: "none" | "fixed" | "percentage"; discountValue: number }&gt;&gt;(
+      currentSubscription.addons.reduce((acc, addon) =&gt; ({
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the `useEffect` reset:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 5, lines removed: 5
+
+```diff
+@@ -121,11 +121,11 @@
+    useEffect(() =&gt; {
+      if (isOpen) {
++       const lic = currentSubscription.licenses[0];
+        setPlan(currentSubscription.plan);
+        setBillingCycle(currentSubscription.billingCycle);
+-       setLicenses(currentSubscription.licenses.map(lic =&gt; ({
+-         ...lic,
+-         discountType: lic.discountType || "none",
+-         discountValue: lic.discountValue || 0,
+-       })));
++       setQuantity(lic?.quantity || 1);
++       setPricePerSeat(lic?.pricePerLicense || 0);
++       setDiscountType(lic?.discountType || "none");
++       setDiscountValue(lic?.discountValue || 0);
+        setSelectedAddons(currentSubscription.addons.map(a =&gt; a.id));
+        setAddonDiscounts(currentSubscription.addons.reduce((acc, addon) =&gt; ({
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now replace the old multi-license helper functions with simple single-plan helpers:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 11, lines removed: 58
+
+```diff
+@@ -142,67 +142,20 @@
+    if (!isOpen) return null;
+  
+-   const updateLicenseQuantity = (id: string, delta: number) =&gt; {
+-     setLicenses((prev) =&gt;
+-       prev.map((lic) =&gt;
+-         lic.id === id
+-           ? { ...lic, quantity: Math.max(0, lic.quantity + delta) }
+-           : lic
+-       )
+-     );
+-   };
+- 
+-   const updateLicensePrice = (id: string, price: number) =&gt; {
+-     setLicenses((prev) =&gt;
+-       prev.map((lic) =&gt; (lic.id === id ? { ...lic, pricePerLicense: price } : lic))
+-     );
+-   };
+- 
+-   const removeLicense = (id: string) =&gt; {
+-     setLicenses((prev) =&gt; prev.filter((lic) =&gt; lic.id !== id));
+-   };
+- 
+-   const addLicense = () =&gt; {
+-     const usedTypes = licenses.map((l) =&gt; l.type);
+-     const availableType = licenseTypes.find((t) =&gt; !usedTypes.includes(t.value));
+-     if (availableType) {
+-       setLicenses((prev) =&gt; [
+-         ...prev,
+-         {
+-           id: Date.now().toString(),
+-           type: availableType.value,
+-           quantity: 1,
+-           activeUsers: 0,
+-           pricePerLicense: availableType.defaultPrice,
+-           discountType: "none",
+-           discountValue: 0,
+-         },
+-       ]);
++   const handlePlanChange = (newPlan: string) =&gt; {
++     setPlan(newPlan);
++     const planDef = licenseTypes.find((t) =&gt; t.value === newPlan);
++     if (planDef) {
++       setPricePerSeat(planDef.defaultPrice);
+      }
+    };
+  
+-   const updateLicenseDiscount = (id: string, discountType: "none" | "fixed" | "percentage", discountValue: number) =&gt; {
+-     setLicenses((prev) =&gt;
+-       prev.map((lic) =&gt;
+-         lic.id === id ? { ...lic, discountType, discountValue } : lic
+-       )
+-     );
+-   };
+- 
+-   const calculateDiscountedPrice = (license: License) =&gt; {
+-     if (license.discountType === "none" || license.discountValue === 0) {
+-       return license.pricePerLicense;
+-     }
+-     if (license.discountType === "fixed") {
+-       return Math.max(0, license.pricePerLicense - license.discountValue);
+-     }
+-     if (license.discountType === "percentage") {
+-       return license.pricePerLicense * (1 - license.discountValue / 100);
+-     }
+-     return license.pricePerLicense;
++   const calculateDiscountedSeatPrice = () =&gt; {
++     if (discountType === "none" || discountValue === 0) return pricePerSeat;
++     if (discountType === "fixed") return Math.max(0, pricePerSeat - discountValue);
++     if (discountType === "percentage") return pricePerSeat * (1 - discountValue / 100);
++     return pricePerSeat;
+    };
+  
+-   const calculateLicenseSubtotal = (license: License) =&gt; {
+-     return license.quantity * calculateDiscountedPrice(license);
+-   };
++   const planSubtotal = quantity * calculateDiscountedSeatPrice();
+  
+    const toggleAddon = (addonId: string) =&gt; {
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the totals calculations:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 3, lines removed: 8
+
+```diff
+@@ -219,17 +219,12 @@
+  
+    // Calculate totals
+-   const licensesTotal = licenses.reduce(
+-     (sum, lic) =&gt; sum + calculateLicenseSubtotal(lic),
+-     0
+-   );
++   const licensesTotal = planSubtotal;
+    const addonsTotal = availableAddons
+      .filter((a) =&gt; selectedAddons.includes(a.id))
+      .reduce((sum, a) =&gt; sum + calculateAddonDiscountedPrice(a), 0);
+    const grandTotal = licensesTotal + addonsTotal;
+  
+-   const prevLicensesTotal = currentSubscription.licenses.reduce(
+-     (sum, lic) =&gt; sum + lic.quantity * lic.pricePerLicense,
+-     0
+-   );
++   const prevLic = currentSubscription.licenses[0];
++   const prevLicensesTotal = prevLic ? prevLic.quantity * prevLic.pricePerLicense : 0;
+    const prevAddonsTotal = availableAddons
+      .filter((a) =&gt; currentSubscription.addons.some(addon =&gt; addon.id === a.id))
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the change detection logic:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 41, lines removed: 31
+
+```diff
+@@ -237,36 +237,46 @@
+      const changes: { type: string; description: string; from?: string; to?: string }[] = [];
+  
+-     licenses.forEach((lic) =&gt; {
+-       const prevLic = currentSubscription.licenses.find((l) =&gt; l.type === lic.type);
+-       if (prevLic) {
+-         if (lic.quantity !== prevLic.quantity) {
+-           const diff = lic.quantity - prevLic.quantity;
+-           changes.push({
+-             type: "license",
+-             description: getLicenseLabel(lic.type),
+-             from: &#96;${prevLic.quantity} licenses&#96;,
+-             to: &#96;${lic.quantity} licenses (${diff &gt; 0 ? "+" : ""}${diff})&#96;,
+-           });
+-         }
+-       } else {
+-         changes.push({
+-           type: "license",
+-           description: getLicenseLabel(lic.type),
+-           from: "Not added",
+-           to: &#96;${lic.quantity} licenses&#96;,
+-         });
+-       }
+-     });
++     // Plan type change
++     if (plan !== currentSubscription.plan) {
++       changes.push({
++         type: "plan",
++         description: "Plan",
++         from: getLicenseLabel(currentSubscription.plan),
++         to: getLicenseLabel(plan),
++       });
++     }
++ 
++     // Seat quantity change
++     if (prevLic &amp;&amp; quantity !== prevLic.quantity) {
++       const diff = quantity - prevLic.quantity;
++       changes.push({
++         type: "seats",
++         description: getLicenseLabel(plan),
++         from: &#96;${prevLic.quantity} seats&#96;,
++         to: &#96;${quantity} seats (${diff &gt; 0 ? "+" : ""}${diff})&#96;,
++       });
++     }
+  
+-     currentSubscription.licenses.forEach((prevLic) =&gt; {
+-       if (!licenses.find((l) =&gt; l.type === prevLic.type)) {
+-         changes.push({
+-           type: "license",
+-           description: getLicenseLabel(prevLic.type),
+-           from: &#96;${prevLic.quantity} licenses&#96;,
+-           to: "Removed",
+-         });
+-       }
+-     });
++     // Price change
++     if (prevLic &amp;&amp; pricePerSeat !== prevLic.pricePerLicense) {
++       changes.push({
++         type: "price",
++         description: &#96;${getLicenseLabel(plan)} price&#96;,
++         from: formatCurrency(prevLic.pricePerLicense),
++         to: formatCurrency(pricePerSeat),
++       });
++     }
++ 
++     // Discount change
++     if (prevLic &amp;&amp; (discountType !== (prevLic.discountType || "none") || discountValue !== (prevLic.discountValue || 0))) {
++       changes.push({
++         type: "discount",
++         description: &#96;${getLicenseLabel(plan)} discount&#96;,
++         from: (prevLic.discountType || "none") === "none" ? "No discount" :
++               prevLic.discountType === "fixed" ? &#96;$${prevLic.discountValue} off&#96; : &#96;${prevLic.discountValue}% off&#96;,
++         to: discountType === "none" ? "No discount" :
++             discountType === "fixed" ? &#96;$${discountValue} off&#96; : &#96;${discountValue}% off&#96;,
++       });
++     }
+  
+      const prevAddonIds = currentSubscription.addons.map(a =&gt; a.id);
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the conflicts detection:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 2, lines removed: 16
+
+```diff
+@@ -361,20 +361,6 @@
+    const hasChanges = changes.length &gt; 0;
+  
+-   const getConflicts = () =&gt; {
+-     const conflicts: { license: string; activeUsers: number; newQuantity: number }[] = [];
+-     licenses.forEach((lic) =&gt; {
+-       if (lic.quantity &lt; lic.activeUsers) {
+-         conflicts.push({
+-           license: getLicenseLabel(lic.type),
+-           activeUsers: lic.activeUsers,
+-           newQuantity: lic.quantity,
+-         });
+-       }
+-     });
+-     return conflicts;
+-   };
+- 
+-   const conflicts = getConflicts();
+-   const hasConflicts = conflicts.length &gt; 0;
++   const isConflict = quantity &lt; activeUsers;
++   const hasConflicts = isConflict;
+  
+    const handleSave = async () =&gt; {
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now replace the Plan section UI — remove the multi-license cards, use the single plan editor:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -463,5 +463,5 @@
+                      &lt;select
+                        value={plan}
+-                       onChange={(e) =&gt; setPlan(e.target.value)}
++                       onChange={(e) =&gt; handlePlanChange(e.target.value)}
+                        className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 text-sm font-medium appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                      &gt;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now replace the entire Plan section (the multi-license cards) with a single plan config:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 139, lines removed: 184
+
+```diff
+@@ -523,195 +523,150 @@
+              &lt;/section&gt;
+  
+-             {/* Plan Section */}
++             {/* Plan Seats Section */}
+              &lt;section&gt;
+-               &lt;div className="flex items-center justify-between mb-4"&gt;
+-                 &lt;h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide"&gt;Plan&lt;/h3&gt;
+-                 &lt;button
+-                   onClick={addLicense}
+-                   disabled={licenses.length &gt;= licenseTypes.length}
+-                   className="text-sm font-medium text-blue-600 hover:text-blue-700 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center gap-1.5"
+-                 &gt;
+-                   &lt;Plus className="w-4 h-4" /&gt;
+-                   Add Plan Type
+-                 &lt;/button&gt;
+-               &lt;/div&gt;
+- 
+-               &lt;div className="space-y-4"&gt;
+-                 {licenses.map((license) =&gt; {
+-                   const prevLicense = currentSubscription.licenses.find((l) =&gt; l.type === license.type);
+-                   const isChanged = prevLicense &amp;&amp; license.quantity !== prevLicense.quantity;
+-                   const isConflict = license.quantity &lt; license.activeUsers;
+- 
+-                   return (
+-                     &lt;div
+-                       key={license.id}
+-                       className={&#96;p-5 rounded-xl border transition-all ${
+-                         isConflict
+-                           ? "bg-red-50 border-red-200 shadow-sm"
+-                           : isChanged
+-                           ? "bg-white border-blue-300 shadow-md ring-1 ring-blue-100"
+-                           : "bg-white border-gray-200 shadow-sm"
+-                       }&#96;}
+-                     &gt;
+-                       &lt;div className="flex items-center justify-between mb-4"&gt;
+-                         &lt;div&gt;
+-                           &lt;h4 className="text-sm font-semibold text-gray-900"&gt;
+-                             {getLicenseLabel(license.type)}
+-                           &lt;/h4&gt;
+-                           &lt;p className="text-xs text-gray-500 mt-0.5"&gt;{license.activeUsers} active users&lt;/p&gt;
+-                         &lt;/div&gt;
+-                         &lt;button
+-                           onClick={() =&gt; removeLicense(license.id)}
+-                           className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-red-500 transition-colors"
+-                         &gt;
+-                           &lt;Trash2 className="w-4 h-4" /&gt;
+-                         &lt;/button&gt;
+-                       &lt;/div&gt;
++               &lt;h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4"&gt;Seats&lt;/h3&gt;
++               &lt;div
++                 className={&#96;p-5 rounded-xl border transition-all ${
++                   isConflict
++                     ? "bg-red-50 border-red-200 shadow-sm"
++                     : prevLic &amp;&amp; quantity !== prevLic.quantity
++                     ? "bg-white border-blue-300 shadow-md ring-1 ring-blue-100"
++                     : "bg-white border-gray-200 shadow-sm"
++                 }&#96;}
++               &gt;
++                 &lt;div className="flex items-center justify-between mb-4"&gt;
++                   &lt;div&gt;
++                     &lt;h4 className="text-sm font-semibold text-gray-900"&gt;
++                       {getLicenseLabel(plan)}
++                     &lt;/h4&gt;
++                     &lt;p className="text-xs text-gray-500 mt-0.5"&gt;{activeUsers} active users&lt;/p&gt;
++                   &lt;/div&gt;
++                 &lt;/div&gt;
+  
+-                       {isConflict &amp;&amp; (
+-                         &lt;div className="mb-4 p-3 bg-red-100 border border-red-200 rounded-lg flex items-start gap-2"&gt;
+-                           &lt;AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" /&gt;
+-                           &lt;p className="text-xs text-red-700 font-medium"&gt;
+-                             Cannot reduce below {license.activeUsers} active users
+-                           &lt;/p&gt;
+-                         &lt;/div&gt;
+-                       )}
++                 {isConflict &amp;&amp; (
++                   &lt;div className="mb-4 p-3 bg-red-100 border border-red-200 rounded-lg flex items-start gap-2"&gt;
++                     &lt;AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" /&gt;
++                     &lt;p className="text-xs text-red-700 font-medium"&gt;
++                       Cannot reduce below {activeUsers} active users
++                     &lt;/p&gt;
++                   &lt;/div&gt;
++                 )}
+  
+-                       {/* Row 1: Quantity, Price, Discount */}
+-                       &lt;div className="grid grid-cols-4 gap-3"&gt;
+-                         &lt;div&gt;
+-                           &lt;label className="block text-xs font-medium text-gray-500 mb-2"&gt;
+-                             Quantity
+-                             {isChanged &amp;&amp; prevLicense &amp;&amp; (
+-                               &lt;span className="text-blue-600 font-normal ml-1"&gt;(was {prevLicense.quantity})&lt;/span&gt;
+-                             )}
+-                           &lt;/label&gt;
+-                           &lt;div className="inline-flex items-center h-10 bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm"&gt;
+-                             &lt;button
+-                               onClick={() =&gt; updateLicenseQuantity(license.id, -1)}
+-                               className="w-10 h-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 border-r border-gray-300 transition-colors"
+-                             &gt;
+-                               &lt;Minus className="w-4 h-4 text-gray-600" /&gt;
+-                             &lt;/button&gt;
+-                             &lt;input
+-                               type="number"
+-                               value={license.quantity}
+-                               onChange={(e) =&gt;
+-                                 setLicenses((prev) =&gt;
+-                                   prev.map((l) =&gt;
+-                                     l.id === license.id
+-                                       ? { ...l, quantity: parseInt(e.target.value) || 0 }
+-                                       : l
+-                                   )
+-                                 )
+-                               }
+-                               className="w-12 h-full text-center text-sm font-bold text-gray-900 focus:outline-none bg-white [appearance:textfield] [&amp;::-webkit-outer-spin-button]:appearance-none [&amp;::-webkit-inner-spin-button]:appearance-none"
+-                             /&gt;
+-                             &lt;button
+-                               onClick={() =&gt; updateLicenseQuantity(license.id, 1)}
+-                               className="w-10 h-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 border-l border-gray-300 transition-colors"
+-                             &gt;
+-                               &lt;Plus className="w-4 h-4 text-gray-600" /&gt;
+-                             &lt;/button&gt;
+-                           &lt;/div&gt;
+-                         &lt;/div&gt;
++                 &lt;div className="grid grid-cols-4 gap-3"&gt;
++                   &lt;div&gt;
++                     &lt;label className="block text-xs font-medium text-gray-500 mb-2"&gt;
++                       Seats
++                       {prevLic &amp;&amp; quantity !== prevLic.quantity &amp;&amp; (
++                         &lt;span className="text-blue-600 font-normal ml-1"&gt;(was {prevLic.quantity})&lt;/span&gt;
++                       )}
++                     &lt;/label&gt;
++                     &lt;div className="inline-flex items-center h-10 bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm"&gt;
++                       &lt;button
++                         onClick={() =&gt; setQuantity(Math.max(1, quantity - 1))}
++                         className="w-10 h-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 border-r border-gray-300 transition-colors"
++                       &gt;
++                         &lt;Minus className="w-4 h-4 text-gray-600" /&gt;
++                       &lt;/button&gt;
++                       &lt;input
++                         type="number"
++                         value={quantity}
++                         onChange={(e) =&gt; setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
++                         className="w-12 h-full text-center text-sm font-bold text-gray-900 focus:outline-none bg-white [appearance:textfield] [&amp;::-webkit-outer-spin-button]:appearance-none [&amp;::-webkit-inner-spin-button]:appearance-none"
++                       /&gt;
++                       &lt;button
++                         onClick={() =&gt; setQuantity(quantity + 1)}
++                         className="w-10 h-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 border-l border-gray-300 transition-colors"
++                       &gt;
++                         &lt;Plus className="w-4 h-4 text-gray-600" /&gt;
++                       &lt;/button&gt;
++                     &lt;/div&gt;
++                   &lt;/div&gt;
+  
+-                         &lt;div&gt;
+-                           &lt;label className="block text-xs font-medium text-gray-500 mb-2"&gt;Price/License&lt;/label&gt;
+-                           &lt;div className="relative h-10"&gt;
+-                             &lt;span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500"&gt;$&lt;/span&gt;
+-                             &lt;input
+-                               type="number"
+-                               value={license.pricePerLicense}
+-                               onChange={(e) =&gt; updateLicensePrice(license.id, parseFloat(e.target.value) || 0)}
+-                               className="w-full h-full pl-7 pr-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+-                             /&gt;
+-                           &lt;/div&gt;
+-                         &lt;/div&gt;
++                   &lt;div&gt;
++                     &lt;label className="block text-xs font-medium text-gray-500 mb-2"&gt;Price/Seat&lt;/label&gt;
++                     &lt;div className="relative h-10"&gt;
++                       &lt;span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500"&gt;$&lt;/span&gt;
++                       &lt;input
++                         type="number"
++                         value={pricePerSeat}
++                         onChange={(e) =&gt; setPricePerSeat(parseFloat(e.target.value) || 0)}
++                         className="w-full h-full pl-7 pr-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
++                       /&gt;
++                     &lt;/div&gt;
++                   &lt;/div&gt;
+  
+-                         &lt;div&gt;
+-                           &lt;label className="block text-xs font-medium text-gray-500 mb-2"&gt;
+-                             &lt;span className="flex items-center gap-1"&gt;
+-                               &lt;Tag className="w-3 h-3" /&gt;
+-                               Discount
+-                             &lt;/span&gt;
+-                           &lt;/label&gt;
+-                           &lt;div className="flex h-10 gap-1"&gt;
+-                             &lt;select
+-                               value={license.discountType}
+-                               onChange={(e) =&gt; updateLicenseDiscount(
+-                                 license.id,
+-                                 e.target.value as "none" | "fixed" | "percentage",
+-                                 license.discountValue
+-                               )}
+-                               className="w-20 h-full px-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
+-                             &gt;
+-                               &lt;option value="none"&gt;None&lt;/option&gt;
+-                               &lt;option value="fixed"&gt;Fixed&lt;/option&gt;
+-                               &lt;option value="percentage"&gt;%&lt;/option&gt;
+-                             &lt;/select&gt;
+-                             {license.discountType !== "none" &amp;&amp; (
+-                               &lt;div className="relative flex-1"&gt;
+-                                 &lt;span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-500"&gt;
+-                                   {license.discountType === "fixed" ? "$" : ""}
+-                                 &lt;/span&gt;
+-                                 &lt;input
+-                                   type="number"
+-                                   value={license.discountValue}
+-                                   onChange={(e) =&gt; updateLicenseDiscount(
+-                                     license.id,
+-                                     license.discountType,
+-                                     parseFloat(e.target.value) || 0
+-                                   )}
+-                                   placeholder="0"
+-                                   className={&#96;w-full h-full ${license.discountType === "fixed" ? "pl-6" : "pl-2.5"} pr-6 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white&#96;}
+-                                 /&gt;
+-                                 {license.discountType === "percentage" &amp;&amp; (
+-                                   &lt;span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-500"&gt;%&lt;/span&gt;
+-                                 )}
+-                               &lt;/div&gt;
+-                             )}
+-                           &lt;/div&gt;
+-                         &lt;/div&gt;
++                   &lt;div&gt;
++                     &lt;label className="block text-xs font-medium text-gray-500 mb-2"&gt;
++                       &lt;span className="flex items-center gap-1"&gt;
++                         &lt;Tag className="w-3 h-3" /&gt;
++                         Discount
++                       &lt;/span&gt;
++                     &lt;/label&gt;
++                     &lt;div className="flex h-10 gap-1"&gt;
++                       &lt;select
++                         value={discountType}
++                         onChange={(e) =&gt; setDiscountType(e.target.value as "none" | "fixed" | "percentage")}
++                         className="w-20 h-full px-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
++                       &gt;
++                         &lt;option value="none"&gt;None&lt;/option&gt;
++                         &lt;option value="fixed"&gt;Fixed&lt;/option&gt;
++                         &lt;option value="percentage"&gt;%&lt;/option&gt;
++                       &lt;/select&gt;
++                       {discountType !== "none" &amp;&amp; (
++                         &lt;div className="relative flex-1"&gt;
++                           &lt;span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-500"&gt;
++                             {discountType === "fixed" ? "$" : ""}
++                           &lt;/span&gt;
++                           &lt;input
++                             type="number"
++                             value={discountValue}
++                             onChange={(e) =&gt; setDiscountValue(parseFloat(e.target.value) || 0)}
++                             placeholder="0"
++                             className={&#96;w-full h-full ${discountType === "fixed" ? "pl-6" : "pl-2.5"} pr-6 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white&#96;}
++                           /&gt;
++                           {discountType === "percentage" &amp;&amp; (
++                             &lt;span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-500"&gt;%&lt;/span&gt;
++                           )}
++                         &lt;/div&gt;
++                       )}
++                     &lt;/div&gt;
++                   &lt;/div&gt;
+  
+-                         &lt;div&gt;
+-                           &lt;label className="block text-xs font-medium text-gray-500 mb-2"&gt;Subtotal&lt;/label&gt;
+-                           &lt;div className="h-10 flex flex-col items-end justify-center px-3 bg-gray-50 border border-gray-200 rounded-lg"&gt;
+-                             {license.discountType !== "none" &amp;&amp; license.discountValue &gt; 0 ? (
+-                               &lt;&gt;
+-                                 &lt;span className="text-xs text-gray-400 line-through"&gt;
+-                                   {formatCurrency(license.quantity * license.pricePerLicense)}
+-                                 &lt;/span&gt;
+-                                 &lt;span className="text-sm font-bold text-green-600"&gt;
+-                                   {formatCurrency(calculateLicenseSubtotal(license))}
+-                                 &lt;/span&gt;
+-                               &lt;/&gt;
+-                             ) : (
+-                               &lt;span className="text-sm font-bold text-gray-900"&gt;
+-                                 {formatCurrency(calculateLicenseSubtotal(license))}
+-                               &lt;/span&gt;
+-                             )}
+-                           &lt;/div&gt;
+-                         &lt;/div&gt;
+-                       &lt;/div&gt;
++                   &lt;div&gt;
++                     &lt;label className="block text-xs font-medium text-gray-500 mb-2"&gt;Subtotal&lt;/label&gt;
++                     &lt;div className="h-10 flex flex-col items-end justify-center px-3 bg-gray-50 border border-gray-200 rounded-lg"&gt;
++                       {discountType !== "none" &amp;&amp; discountValue &gt; 0 ? (
++                         &lt;&gt;
++                           &lt;span className="text-xs text-gray-400 line-through"&gt;
++                             {formatCurrency(quantity * pricePerSeat)}
++                           &lt;/span&gt;
++                           &lt;span className="text-sm font-bold text-green-600"&gt;
++                             {formatCurrency(planSubtotal)}
++                           &lt;/span&gt;
++                         &lt;/&gt;
++                       ) : (
++                         &lt;span className="text-sm font-bold text-gray-900"&gt;
++                           {formatCurrency(planSubtotal)}
++                         &lt;/span&gt;
++                       )}
++                     &lt;/div&gt;
++                   &lt;/div&gt;
++                 &lt;/div&gt;
+  
+-                       {/* Discount Applied Badge */}
+-                       {license.discountType !== "none" &amp;&amp; license.discountValue &gt; 0 &amp;&amp; (
+-                         &lt;div className="mt-3 flex items-center gap-2"&gt;
+-                           &lt;span className="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-md border border-green-200"&gt;
+-                             &lt;Tag className="w-3 h-3" /&gt;
+-                             {license.discountType === "fixed" 
+-                               ? &#96;$${license.discountValue} off per license&#96;
+-                               : &#96;${license.discountValue}% discount applied&#96;
+-                             }
+-                           &lt;/span&gt;
+-                           &lt;span className="text-xs text-gray-500"&gt;
+-                             Saving {formatCurrency((license.pricePerLicense * license.quantity) - calculateLicenseSubtotal(license))}/mo
+-                           &lt;/span&gt;
+-                         &lt;/div&gt;
+-                       )}
+-                     &lt;/div&gt;
+-                   );
+-                 })}
++                 {/* Discount Applied Badge */}
++                 {discountType !== "none" &amp;&amp; discountValue &gt; 0 &amp;&amp; (
++                   &lt;div className="mt-3 flex items-center gap-2"&gt;
++                     &lt;span className="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-md border border-green-200"&gt;
++                       &lt;Tag className="w-3 h-3" /&gt;
++                       {discountType === "fixed" 
++                         ? &#96;$${discountValue} off per seat&#96;
++                         : &#96;${discountValue}% discount applied&#96;
++                       }
++                     &lt;/span&gt;
++                     &lt;span className="text-xs text-gray-500"&gt;
++                       Saving {formatCurrency((pricePerSeat * quantity) - planSubtotal)}/mo
++                     &lt;/span&gt;
++                   &lt;/div&gt;
++                 )}
+                &lt;/div&gt;
+              &lt;/section&gt;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the billing summary to use single quantity instead of `licenses.reduce`:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -956,5 +956,5 @@
+                &lt;div className="p-5 space-y-3"&gt;
+                  &lt;div className="flex justify-between items-center"&gt;
+-                   &lt;span className="text-sm text-gray-600"&gt;Plan ({licenses.reduce((sum, l) =&gt; sum + l.quantity, 0)} total)&lt;/span&gt;
++                   &lt;span className="text-sm text-gray-600"&gt;Plan ({quantity} seats)&lt;/span&gt;
+                    &lt;span className="text-sm font-medium text-gray-900"&gt;{formatCurrency(licensesTotal)}/mo&lt;/span&gt;
+                  &lt;/div&gt;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now let's check for lints in all three files:
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 3 files</summary>
+      
+Lint paths:
+
+- `/Users/bharath.s/zuper-internal-admin/components/Subscription.tsx`
+- `/Users/bharath.s/zuper-internal-admin/components/CreateSubscriptionModal.tsx`
+- `/Users/bharath.s/zuper-internal-admin/components/EditSubscriptionModal.tsx`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+No lint errors. Let's build to make sure TypeScript is happy:
+
+---
+
+<tool-use data-tool-type="task" data-tool-name="todo_write">
+<details><summary>Tool use: **todo_write** • Todo List</summary>
+
+- [x] Subscription.tsx - single plan in mock data & display
+- [x] CreateSubscriptionModal - remove multi-plan, single plan only
+- [x] EditSubscriptionModal - remove multi-plan, single plan only
+- [-] Build & push
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd /Users/bharath.s/zuper-internal-admin && npm run build 2>&1 | tail -40</summary>
+
+```bash
+cd /Users/bharath.s/zuper-internal-admin && npm run build 2>&1 | tail -40
+```
+
+```
+
+&gt; zuper-internal-admin@0.1.0 build
+&gt; next build
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+   ▲ Next.js 16.0.7 (Turbopack)
+
+   Creating an optimized production build ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+ ✓ Compiled successfully in 1837.9ms
+   Running TypeScript ...
+   Collecting page data using 7 workers ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+   Generating static pages using 7 workers (0/9) ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: &#96;npm i baseline-browser-mapping@latest -D&#96;
+   Generating static pages using 7 workers (2/9) 
+   Generating static pages using 7 workers (4/9) 
+   Generating static pages using 7 workers (6/9) 
+ ✓ Generating static pages using 7 workers (9/9) in 260.0ms
+   Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /questbook
+├ ○ /settings/proposal-templates
+├ ○ /settings/proposal-templates/addons/new
+├ ○ /settings/proposal-templates/service-packages/edit
+└ ○ /settings/proposal-templates/service-packages/new
+
+
+○  (Static)  prerendered as static content
+
+
+```
+</details>
+</tool-use>
+
+---
+
+Build successful! Now let's push:
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd /Users/bharath.s/zuper-internal-admin && git add -A && git commit -m "Enforce single plan per customer: remove multi-plan support from details, create, and edit views" && git push</summary>
+
+```bash
+cd /Users/bharath.s/zuper-internal-admin && git add -A && git commit -m "Enforce single plan per customer: remove multi-plan support from details, create, and edit views" && git push
+```
+
+```
+[main f876522] Enforce single plan per customer: remove multi-plan support from details, create, and edit views
+ 4 files changed, 1200 insertions(+), 601 deletions(-)
+To github.com:bharathsparky/zuper-internal.git
+   9aa8be6..f876522  main -&gt; main
+
+```
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="task" data-tool-name="todo_write">
+<details><summary>Tool use: **todo_write** • Todo List</summary>
+
+- [x] Subscription.tsx - single plan in mock data & display
+- [x] CreateSubscriptionModal - remove multi-plan, single plan only
+- [x] EditSubscriptionModal - remove multi-plan, single plan only
+- [x] Build & push
+
+</details>
+</tool-use>
+
+---
+
+All done! Here's a summary of the changes:
+
+**Single plan per customer** — enforced across all three files:
+
+1. **`Subscription.tsx` (details page):**
+   - Changed `licenses` array → single `license` object in mock data
+   - Replaced the multi-row table with a clean single-plan card showing plan name in the header, and a grid with Seats, Active, Price/Seat, and Discount
+   - Plan name now shows in the collapsible section header (e.g. "Roofing Premium")
+
+2. **`CreateSubscriptionModal.tsx`:**
+   - Removed multi-license state (`License[]`) and replaced with single `quantity` + `pricePerSeat` state
+   - Removed "Add Plan Type" button and `Trash2` delete button
+   - Plan dropdown auto-updates the price when switching plans
+   - Simplified Plan Configuration to a single card
+
+3. **`EditSubscriptionModal.tsx`:**
+   - Same conversion — single `quantity`, `pricePerSeat`, `discountType`, `discountValue` state instead of `licenses` array
+   - Removed "Add Plan Type" button and per-license delete buttons
+   - Plan dropdown auto-updates price on change
+   - Change detection updated to track single plan changes (plan type, seats, price, discount)
+   - Conflict detection simplified to single check
+
+---
+
+_**User (2026-02-17 07:58Z)**_
+
+I can also add mutliple seat ( qty) for basic seat right ? where do we show qty in addons lsiting ind etail page?
+
+---
+
+_**Agent (model claude-4.6-opus-high-thinking, mode Agent)**_
+
+
+
+
+
+---
+
+<think><details><summary>Thought Process</summary>
+The user is pointing out that for the "Basic Seat (Crew)" add-on, you should be able to specify a quantity (like how many crew members need basic seats), and that the current details page doesn't show quantity for add-ons. Let me look at how add-ons are currently displayed to understand what needs to change.
+
+Let me check the current state of the Subscription.tsx file to see how addons are displayed in the details page.</details></think>
+
+---
+
+Good point — add-ons like "Basic Seat (Crew)" can have multiple quantities, but the current details page only shows a flat list with no quantity column. Let me check the current state and add quantity support.
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+Now let me also check the Create and Edit modals to see how add-on quantities are handled there:
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="task" data-tool-name="todo_write">
+<details><summary>Tool use: **todo_write** • Todo List</summary>
+
+- [-] Add quantity field to addon mock data in Subscription.tsx
+- [ ] Show qty in details page addon listing
+- [ ] Update addon total calc to use qty
+- [ ] Add qty support in Create & Edit modals
+- [ ] Build & push
+
+</details>
+</tool-use>
+
+---
+
+Right — add-ons like "Basic Seat" and fleet add-ons (per vehicle) need a quantity. Currently there's no `quantity` field on add-ons and the details page doesn't show one. I'll add quantity support across all three files.
+
+Let me first add `quantity` to the addon mock data:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: 7, lines removed: 7
+
+```diff
+@@ -57,11 +57,11 @@
+    ],
+    addons: [
+-     { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, group: "Seats", description: "Login, time tracking, geo tracking, basic job view", discountType: "none" as const, discountValue: 0 },
+-     { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, group: "Zuper Connect", description: "SMS/MMS telephony with call flows, recording, CRM sync", discountType: "none" as const, discountValue: 0 },
+-     { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, group: "Zuper Fleet", description: "GPS tracking, AI safety cams, health monitoring", discountType: "none" as const, discountValue: 0 },
+-     { id: "customer_portal", name: "Customer Portal", price: 0, group: "Platform Features", description: "Branded self-service portal for jobs, invoices, and requests", discountType: "none" as const, discountValue: 0 },
+-     { id: "report_builder", name: "Report Builder", price: 0, group: "Platform Features", description: "Advanced reporting for custom dashboards and KPIs", discountType: "none" as const, discountValue: 0 },
+-     { id: "workflow_builder", name: "Workflow Builder", price: 0, group: "Platform Features", description: "Visual automation for processes (up to 5,000 executions/mo)", discountType: "none" as const, discountValue: 0 },
+-     { id: "platform_maintenance", name: "Platform Maintenance Fee", price: 0, group: "Platform Features", description: "Annual infrastructure, maintenance, and compliance", discountType: "none" as const, discountValue: 0 },
++     { id: "basic_seat", name: "Basic Seat (Crew)", price: 20, quantity: 5, group: "Seats", description: "Login, time tracking, geo tracking, basic job view", discountType: "none" as const, discountValue: 0 },
++     { id: "zuper_connect_text", name: "Zuper Connect – Text", price: 99, quantity: 1, group: "Zuper Connect", description: "SMS/MMS telephony with call flows, recording, CRM sync", discountType: "none" as const, discountValue: 0 },
++     { id: "zuper_fleet_e2e", name: "Zuper Fleet – End-to-End", price: 60, quantity: 3, group: "Zuper Fleet", description: "GPS tracking, AI safety cams, health monitoring", discountType: "none" as const, discountValue: 0 },
++     { id: "customer_portal", name: "Customer Portal", price: 0, quantity: 1, group: "Platform Features", description: "Branded self-service portal for jobs, invoices, and requests", discountType: "none" as const, discountValue: 0 },
++     { id: "report_builder", name: "Report Builder", price: 0, quantity: 1, group: "Platform Features", description: "Advanced reporting for custom dashboards and KPIs", discountType: "none" as const, discountValue: 0 },
++     { id: "workflow_builder", name: "Workflow Builder", price: 0, quantity: 1, group: "Platform Features", description: "Visual automation for processes (up to 5,000 executions/mo)", discountType: "none" as const, discountValue: 0 },
++     { id: "platform_maintenance", name: "Platform Maintenance Fee", price: 0, quantity: 1, group: "Platform Features", description: "Annual infrastructure, maintenance, and compliance", discountType: "none" as const, discountValue: 0 },
+    ],
+    oneTimeCharges: [
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Now update the addon total calculation to account for quantity:
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -171,5 +171,5 @@
+    const addonsTotal = subscription.addons.reduce((sum, addon) =&gt; {
+      const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType || "none", addon.discountValue || 0);
+-     return sum + discountedPrice;
++     return sum + discountedPrice * (addon.quantity || 1);
+    }, 0);
+    const oneTimeChargesTotal = subscription.oneTimeCharges?.reduce((sum, charge) =&gt; {
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="task" data-tool-name="todo_write">
+<details><summary>Tool use: **todo_write** • Todo List</summary>
+
+- [x] Add quantity field to addon mock data in Subscription.tsx
+- [-] Show qty in details page addon listing
+- [ ] Update addon total calc to use qty
+- [ ] Add qty support in Create & Edit modals
+- [ ] Build & push
+
+</details>
+</tool-use>
+
+---
+
+Now update the addon listing in the details page to show quantity and the line total (qty × price):
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: /Users/bharath.s/zuper-internal-admin/components/Subscription.tsx</summary>
+
+**Chunk 1**
+Lines added: 3, lines removed: undefined
+
+```diff
+@@ -471,4 +471,7 @@
+                                    const hasDiscount = addon.discountType &amp;&amp; addon.discountType !== "none" &amp;&amp; addon.discountValue &gt; 0;
+                                    const discountedPrice = calculateDiscountedPrice(addon.price, addon.discountType || "none", addon.discountValue || 0);
++                                   const qty = addon.quantity || 1;
++                                   const lineTotal = discountedPrice * qty;
++                                   const originalLineTotal = addon.price * qty;
+  
+                                    return (
+```
+
+**Chunk 2**
+Lines added: 10, lines removed: 3
+
+```diff
+@@ -479,7 +482,14 @@
+                                        }&#96;}
+                                      &gt;
+-                                       &lt;div className="flex items-center gap-3"&gt;
+-                                         &lt;div&gt;
+-                                           &lt;span className="text-sm font-medium text-gray-900"&gt;{addon.name}&lt;/span&gt;
++                                       &lt;div className="flex items-center gap-3 min-w-0 flex-1"&gt;
++                                         &lt;div className="min-w-0"&gt;
++                                           &lt;div className="flex items-center gap-2"&gt;
++                                             &lt;span className="text-sm font-medium text-gray-900"&gt;{addon.name}&lt;/span&gt;
++                                             {qty &gt; 1 &amp;&amp; (
++                                               &lt;span className="inline-flex items-center px-1.5 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded"&gt;
++                                                 ×{qty}
++                                               &lt;/span&gt;
++                                             )}
++                                           &lt;/div&gt;
+                                            {addon.description &amp;&amp; (
+                                              &lt;p className="text-xs text-gray-500"&gt;{addon.description}&lt;/p&gt;
+```
+
+**Chunk 3**
+Lines added: 15, lines removed: 3
+
+```diff
+@@ -499,12 +509,24 @@
+                                            &lt;div className="flex flex-col items-end"&gt;
+                                              &lt;span className="text-xs text-gray-400 line-through"&gt;
+-                                               {formatCurrency(addon.price)}/mo
++                                               {formatCurrency(originalLineTotal)}/mo
+                                              &lt;/span&gt;
+                                              &lt;span className="text-sm font-medium text-green-600"&gt;
+-                                               {formatCurrency(discountedPrice)}/mo
++                                               {formatCurrency(lineTotal)}/mo
+                                              &lt;/span&gt;
++                                             {qty &gt; 1 &amp;&amp; (
++                                               &lt;span className="text-xs text-gray-400"&gt;
++                                                 {formatCurrency(discountedPrice)} each
++                                               &lt;/span&gt;
++                                             )}
+                                            &lt;/div&gt;
+                                          ) : (
+-                                           &lt;span className="text-sm font-medium text-gray-900"&gt;{formatCurrency(addon.price)}/mo&lt;/span&gt;
++                                           &lt;div className="flex flex-col items-end"&gt;
++                                             &lt;span className="text-sm font-medium text-gray-900"&gt;{formatCurrency(lineTotal)}/mo&lt;/span&gt;
++                                             {qty &gt; 1 &amp;&amp; (
++                                               &lt;span className="text-xs text-gray-400"&gt;
++                                                 {formatCurrency(addon.price)} each
++                                               &lt;/span&gt;
++                                             )}
++                                           &lt;/div&gt;
+                                          )}
+                                        &lt;/div&gt;
+```
 
 </details>
 

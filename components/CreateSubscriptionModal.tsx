@@ -45,6 +45,7 @@ export default function CreateSubscriptionModal({
   const [quantity, setQuantity] = useState(10);
   const [pricePerSeat, setPricePerSeat] = useState(50);
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
+  const [addonQuantities, setAddonQuantities] = useState<Record<string, number>>({});
   const [trialPeriod, setTrialPeriod] = useState<string>("none");
   const [customTrialDate, setCustomTrialDate] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -60,18 +61,27 @@ export default function CreateSubscriptionModal({
   };
 
   const toggleAddon = (addonId: string) => {
-    setSelectedAddons((prev) =>
-      prev.includes(addonId)
-        ? prev.filter((id) => id !== addonId)
-        : [...prev, addonId]
-    );
+    setSelectedAddons((prev) => {
+      if (prev.includes(addonId)) {
+        return prev.filter((id) => id !== addonId);
+      } else {
+        if (!addonQuantities[addonId]) {
+          setAddonQuantities((q) => ({ ...q, [addonId]: 1 }));
+        }
+        return [...prev, addonId];
+      }
+    });
+  };
+
+  const updateAddonQuantity = (addonId: string, qty: number) => {
+    setAddonQuantities((prev) => ({ ...prev, [addonId]: Math.max(1, qty) }));
   };
 
   // Calculate totals
   const licensesTotal = quantity * pricePerSeat;
   const addonsTotal = addons
     .filter((a) => selectedAddons.includes(a.id))
-    .reduce((sum, a) => sum + a.price, 0);
+    .reduce((sum, a) => sum + a.price * (addonQuantities[a.id] || 1), 0);
   const grandTotal = licensesTotal + addonsTotal;
 
   const handleSubmit = async () => {
@@ -260,38 +270,72 @@ export default function CreateSubscriptionModal({
                     <div className="space-y-2">
                       {addons.filter(a => a.group === group).map((addon) => {
                         const isIncluded = group === "Platform Features" && plan.startsWith("roofing_");
+                        const isSelected = selectedAddons.includes(addon.id);
+                        const qty = addonQuantities[addon.id] || 1;
                         return (
-                          <label
+                          <div
                             key={addon.id}
-                            className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                            className={`rounded-lg border transition-colors ${
                               isIncluded
                                 ? "bg-green-50 border-green-200"
-                                : selectedAddons.includes(addon.id)
+                                : isSelected
                                 ? "bg-blue-50 border-blue-200"
                                 : "bg-gray-50 border-gray-200 hover:border-blue-300"
                             }`}
                           >
-                            <div className="flex items-center gap-3">
-                              <input
-                                type="checkbox"
-                                checked={isIncluded || selectedAddons.includes(addon.id)}
-                                onChange={() => !isIncluded && toggleAddon(addon.id)}
-                                disabled={isIncluded}
-                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50"
-                              />
-                              <div>
-                                <span className="text-sm text-gray-900">{addon.name}</span>
-                                <p className="text-xs text-gray-500">{addon.description}</p>
+                            <label className="flex items-center justify-between p-3 cursor-pointer">
+                              <div className="flex items-center gap-3">
+                                <input
+                                  type="checkbox"
+                                  checked={isIncluded || isSelected}
+                                  onChange={() => !isIncluded && toggleAddon(addon.id)}
+                                  disabled={isIncluded}
+                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50"
+                                />
+                                <div>
+                                  <span className="text-sm text-gray-900">{addon.name}</span>
+                                  <p className="text-xs text-gray-500">{addon.description}</p>
+                                </div>
                               </div>
-                            </div>
-                            <span className="text-sm text-gray-600 flex-shrink-0 ml-4">
-                              {isIncluded ? (
-                                <span className="text-green-600 font-medium">Included</span>
-                              ) : (
-                                <>{formatCurrency(addon.price)}/mo</>
-                              )}
-                            </span>
-                          </label>
+                              <span className="text-sm text-gray-600 flex-shrink-0 ml-4">
+                                {isIncluded ? (
+                                  <span className="text-green-600 font-medium">Included</span>
+                                ) : (
+                                  <>{formatCurrency(addon.price)}/mo{qty > 1 ? " each" : ""}</>
+                                )}
+                              </span>
+                            </label>
+                            {isSelected && !isIncluded && (
+                              <div className="px-3 pb-3 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center gap-2 pl-7">
+                                  <span className="text-xs font-medium text-gray-500">Qty:</span>
+                                  <div className="inline-flex items-center h-7 bg-white border border-gray-300 rounded-md overflow-hidden">
+                                    <button
+                                      onClick={() => updateAddonQuantity(addon.id, qty - 1)}
+                                      className="w-7 h-full flex items-center justify-center hover:bg-gray-50"
+                                    >
+                                      <Minus className="w-3 h-3 text-gray-600" />
+                                    </button>
+                                    <input
+                                      type="number"
+                                      value={qty}
+                                      onChange={(e) => updateAddonQuantity(addon.id, parseInt(e.target.value) || 1)}
+                                      className="w-10 h-full text-center text-xs font-medium border-x border-gray-300 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    />
+                                    <button
+                                      onClick={() => updateAddonQuantity(addon.id, qty + 1)}
+                                      className="w-7 h-full flex items-center justify-center hover:bg-gray-50"
+                                    >
+                                      <Plus className="w-3 h-3 text-gray-600" />
+                                    </button>
+                                  </div>
+                                </div>
+                                <span className="text-sm font-medium text-gray-900">
+                                  {formatCurrency(addon.price * qty)}/mo
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         );
                       })}
                     </div>

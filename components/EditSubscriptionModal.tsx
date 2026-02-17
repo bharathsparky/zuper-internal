@@ -28,6 +28,7 @@ interface License {
 
 interface AddonWithDiscount {
   id: string;
+  quantity?: number;
   discountType: "none" | "fixed" | "percentage";
   discountValue: number;
 }
@@ -108,6 +109,12 @@ export default function EditSubscriptionModal({
   const [selectedAddons, setSelectedAddons] = useState<string[]>(
     currentSubscription.addons.map(a => a.id)
   );
+  const [addonQuantities, setAddonQuantities] = useState<Record<string, number>>(
+    currentSubscription.addons.reduce((acc, addon) => ({
+      ...acc,
+      [addon.id]: addon.quantity || 1
+    }), {} as Record<string, number>)
+  );
   const [oneTimeChargeDiscounts, setOneTimeChargeDiscounts] = useState<Record<string, { discountType: "none" | "fixed" | "percentage"; discountValue: number }>>(
     (currentSubscription.oneTimeCharges || []).reduce((acc, charge) => ({
       ...acc,
@@ -128,6 +135,10 @@ export default function EditSubscriptionModal({
       setDiscountType(lic?.discountType || "none");
       setDiscountValue(lic?.discountValue || 0);
       setSelectedAddons(currentSubscription.addons.map(a => a.id));
+      setAddonQuantities(currentSubscription.addons.reduce((acc, addon) => ({
+        ...acc,
+        [addon.id]: addon.quantity || 1
+      }), {} as Record<string, number>));
       setAddonDiscounts(currentSubscription.addons.reduce((acc, addon) => ({
         ...acc,
         [addon.id]: { discountType: addon.discountType || "none", discountValue: addon.discountValue || 0 }
@@ -163,16 +174,23 @@ export default function EditSubscriptionModal({
       if (prev.includes(addonId)) {
         return prev.filter((id) => id !== addonId);
       } else {
-        // Initialize discount state for new addon
+        // Initialize discount & quantity state for new addon
         if (!addonDiscounts[addonId]) {
           setAddonDiscounts(prevDiscounts => ({
             ...prevDiscounts,
             [addonId]: { discountType: "none", discountValue: 0 }
           }));
         }
+        if (!addonQuantities[addonId]) {
+          setAddonQuantities(prevQty => ({ ...prevQty, [addonId]: 1 }));
+        }
         return [...prev, addonId];
       }
     });
+  };
+
+  const updateAddonQuantity = (addonId: string, qty: number) => {
+    setAddonQuantities((prev) => ({ ...prev, [addonId]: Math.max(1, qty) }));
   };
 
   const updateAddonDiscount = (addonId: string, discountType: "none" | "fixed" | "percentage", discountValue: number) => {
@@ -221,14 +239,17 @@ export default function EditSubscriptionModal({
   const licensesTotal = planSubtotal;
   const addonsTotal = availableAddons
     .filter((a) => selectedAddons.includes(a.id))
-    .reduce((sum, a) => sum + calculateAddonDiscountedPrice(a), 0);
+    .reduce((sum, a) => sum + calculateAddonDiscountedPrice(a) * (addonQuantities[a.id] || 1), 0);
   const grandTotal = licensesTotal + addonsTotal;
 
   const prevLic = currentSubscription.licenses[0];
   const prevLicensesTotal = prevLic ? prevLic.quantity * prevLic.pricePerLicense : 0;
   const prevAddonsTotal = availableAddons
     .filter((a) => currentSubscription.addons.some(addon => addon.id === a.id))
-    .reduce((sum, a) => sum + a.price, 0);
+    .reduce((sum, a) => {
+      const prevAddon = currentSubscription.addons.find(addon => addon.id === a.id);
+      return sum + a.price * (prevAddon?.quantity || 1);
+    }, 0);
   const prevGrandTotal = prevLicensesTotal + prevAddonsTotal;
   const totalDifference = grandTotal - prevGrandTotal;
 
@@ -727,6 +748,8 @@ export default function EditSubscriptionModal({
                         const discount = addonDiscounts[addon.id] || { discountType: "none", discountValue: 0 };
                         const hasDiscount = discount.discountType !== "none" && discount.discountValue > 0;
                         const discountedPrice = calculateAddonDiscountedPrice(addon);
+                        const qty = addonQuantities[addon.id] || 1;
+                        const lineTotal = discountedPrice * qty;
 
                         return (
                           <div
@@ -776,18 +799,47 @@ export default function EditSubscriptionModal({
                                   <span className="text-sm font-medium text-green-600">$0</span>
                                 ) : hasDiscount ? (
                                   <div className="flex flex-col items-end">
-                                    <span className="text-xs text-gray-400 line-through">{formatCurrency(addon.price)}/mo</span>
-                                    <span className="text-sm font-semibold text-green-600">{formatCurrency(discountedPrice)}/mo</span>
+                                    <span className="text-xs text-gray-400 line-through">{formatCurrency(addon.price * qty)}/mo</span>
+                                    <span className="text-sm font-semibold text-green-600">{formatCurrency(lineTotal)}/mo</span>
+                                    {qty > 1 && <span className="text-xs text-gray-400">{formatCurrency(discountedPrice)} each</span>}
                                   </div>
                                 ) : (
-                                  <span className="text-sm font-semibold text-gray-900">{formatCurrency(addon.price)}/mo</span>
+                                  <div className="flex flex-col items-end">
+                                    <span className="text-sm font-semibold text-gray-900">{formatCurrency(lineTotal)}/mo</span>
+                                    {qty > 1 && <span className="text-xs text-gray-400">{formatCurrency(addon.price)} each</span>}
+                                  </div>
                                 )}
                               </div>
                             </div>
                             
-                            {/* Discount controls for selected addons (not for included) */}
+                            {/* Quantity & Discount controls for selected addons (not for included) */}
                             {isSelected && !isIncluded && (
-                              <div className="px-5 pb-3" onClick={(e) => e.stopPropagation()}>
+                              <div className="px-5 pb-3 space-y-2" onClick={(e) => e.stopPropagation()}>
+                                {/* Quantity */}
+                                <div className="flex items-center gap-2 pl-8">
+                                  <span className="text-xs font-medium text-gray-500">Qty:</span>
+                                  <div className="inline-flex items-center h-7 bg-white border border-gray-300 rounded-md overflow-hidden">
+                                    <button
+                                      onClick={() => updateAddonQuantity(addon.id, qty - 1)}
+                                      className="w-7 h-full flex items-center justify-center hover:bg-gray-50"
+                                    >
+                                      <Minus className="w-3 h-3 text-gray-600" />
+                                    </button>
+                                    <input
+                                      type="number"
+                                      value={qty}
+                                      onChange={(e) => updateAddonQuantity(addon.id, parseInt(e.target.value) || 1)}
+                                      className="w-10 h-full text-center text-xs font-medium border-x border-gray-300 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    />
+                                    <button
+                                      onClick={() => updateAddonQuantity(addon.id, qty + 1)}
+                                      className="w-7 h-full flex items-center justify-center hover:bg-gray-50"
+                                    >
+                                      <Plus className="w-3 h-3 text-gray-600" />
+                                    </button>
+                                  </div>
+                                </div>
+                                {/* Discount */}
                                 <div className="flex items-center gap-2 pl-8">
                                   <span className="text-xs font-medium text-gray-500 flex items-center gap-1">
                                     <Tag className="w-3 h-3" />
@@ -829,7 +881,7 @@ export default function EditSubscriptionModal({
                                   )}
                                   {hasDiscount && (
                                     <span className="text-xs text-green-600 font-medium">
-                                      Saving {formatCurrency(addon.price - discountedPrice)}/mo
+                                      Saving {formatCurrency((addon.price - discountedPrice) * qty)}/mo
                                     </span>
                                   )}
                                 </div>
